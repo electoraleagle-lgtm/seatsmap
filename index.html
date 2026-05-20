@@ -1,0 +1,2063 @@
+<!DOCTYPE html>
+
+<html lang="en">	
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seats of the States</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@300;400&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #9CA3AF;
+    color: #c8d8e8;
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-bottom: 40px;
+    overflow-x: hidden;
+  }
+  header { padding: clamp(12px, 3vw, 26px) clamp(12px, 3vw, 24px) 6px; text-align: center; width: 100%; }
+  .eyebrow { font-size: clamp(8px, 1.5vw, 9px); letter-spacing: 0.35em; color: #b45309; text-transform: uppercase; margin-bottom: 7px; }
+  h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(16px, 3vw, 30px); letter-spacing: -0.04em; color: #ffffff; }
+  .subtitle { margin-top: 5px; font-size: clamp(8px, 1.5vw, 10px); color: #3a5070; letter-spacing: 0.1em; }
+
+/* ── Color by toolbar ── */
+#color-toolbar {
+display: flex;
+align-items: center;
+flex-wrap: wrap;
+gap: 8px;
+width: min(calc(100vw - 24px), 900px);
+margin-top: 12px;
+padding: 8px 14px;
+background: #0c1420;
+border: 1px solid #1a2d42;
+border-radius: 10px;
+}
+#color-toolbar .toolbar-label {
+font-size: 8px;
+letter-spacing: 0.18em;
+text-transform: uppercase;
+color: #2d4a60;
+margin-right: 4px;
+white-space: nowrap;
+}
+.theme-btn {
+display: flex;
+align-items: center;
+gap: 6px;
+padding: 5px 11px;
+background: #0f1e2e;
+border: 1px solid #1e3550;
+border-radius: 6px;
+color: #4a7090;
+font-family: ‘DM Mono’, monospace;
+font-size: clamp(7px, 1.2vw, 9px);
+letter-spacing: 0.1em;
+text-transform: uppercase;
+cursor: pointer;
+transition: border-color 0.2s, color 0.2s, background 0.2s;
+white-space: nowrap;
+}
+.theme-btn:hover { border-color: #2d4a70; color: #c8d8e8; }
+.theme-btn.active { border-color: #f59e0b; color: #f59e0b; background: #1a1200; }
+.theme-btn .swatch-row { display: flex; gap: 3px; }
+.theme-btn .swatch { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+#map-svg { display: block; width: 100%; max-width: 900px; height: auto; margin: 4px auto 0; touch-action: manipulation; }
+.state-label { font-family: ‘DM Mono’, monospace; font-size: 11px; text-anchor: middle; pointer-events: none; user-select: none; transition: opacity 0.4s; }
+.dot { cursor: pointer; touch-action: manipulation; }
+#tooltip {
+position: fixed; background: #0c1824; border: 1px solid #1e3550;
+border-top: 2px solid #f59e0b; padding: 6px 12px; border-radius: 6px;
+pointer-events: none; font-size: clamp(9px, 1.5vw, 11px); color: #c8d8e8; z-index: 999;
+opacity: 0; transition: opacity 0.1s; white-space: nowrap;
+transform: translateX(-50%); max-width: calc(100vw - 24px);
+}
+#tooltip strong { color: #f59e0b; margin-right: 5px; }
+#tooltip .tt-name { color: #e0eaf5; margin-right: 4px; }
+#tooltip span { color: #4a7090; font-size: 10px; margin-left: 5px; }
+#tooltip::after { content: ‘’; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #1e3550; }
+#tooltip::before { content: ‘’; position: absolute; top: calc(100% - 1px); left: 50%; transform: translateX(-50%); z-index: 1; border: 5px solid transparent; border-top-color: #0c1824; }
+.stats { display: flex; align-items: stretch; flex-wrap: wrap; background: #0c1420; border: 1px solid #1a2d42; border-radius: 10px; overflow: hidden; margin-top: 10px; width: min(calc(100vw - 24px), 900px); }
+.stat { padding: clamp(6px, 1.5vw, 9px) clamp(10px, 2vw, 18px); text-align: center; border-right: 1px solid #1a2d42; flex: 1; min-width: 60px; }
+.stat:last-child { border-right: none; }
+.stat-val { font-family: ‘Syne’, sans-serif; font-weight: 800; font-size: clamp(14px, 2.5vw, 18px); color: #f59e0b; line-height: 1; }
+.stat-lbl { font-size: clamp(7px, 1.2vw, 8px); letter-spacing: 0.12em; text-transform: uppercase; color: #2d4a60; margin-top: 3px; }
+.clr-btn { padding: clamp(6px, 1.5vw, 9px) clamp(8px, 1.5vw, 15px); background: none; border: none; color: #2d4a60; font-family: ‘DM Mono’, monospace; font-size: clamp(7px, 1.2vw, 9px); letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: color 0.2s; white-space: nowrap; }
+.clr-btn:hover { color: #f59e0b; }
+.rnd-btn { padding: clamp(6px, 1.5vw, 9px) clamp(8px, 1.5vw, 15px); background: none; border: none; border-left: 1px solid #1a2d42; color: #2d4a60; font-family: ‘DM Mono’, monospace; font-size: clamp(7px, 1.2vw, 9px); letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: color 0.2s; white-space: nowrap; }
+.rnd-btn:hover { color: #f59e0b; }
+.rnd-btn.active { color: #f59e0b; }
+.legend { display: flex; flex-wrap: wrap; gap: clamp(8px, 2vw, 16px); align-items: center; margin-top: 9px; font-size: clamp(7px, 1.2vw, 9px); letter-spacing: 0.1em; text-transform: uppercase; color: #2d4a60; padding: 0 clamp(6px, 1.5vw, 12px); }
+.ld { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; vertical-align: middle; flex-shrink: 0; }
+
+/* Legend for color-by themes */
+#theme-legend {
+display: none;
+flex-wrap: wrap;
+gap: clamp(6px, 1.5vw, 12px);
+align-items: center;
+margin-top: 8px;
+font-size: clamp(7px, 1.2vw, 9px);
+letter-spacing: 0.1em;
+text-transform: uppercase;
+color: #2d4a60;
+padding: 7px clamp(6px, 1.5vw, 12px);
+width: min(calc(100vw - 24px), 900px);
+background: #0c1420;
+border: 1px solid #1a2d42;
+border-radius: 10px;
+}
+#theme-legend.visible { display: flex; }
+.legend-label { color: #2d4a60; margin-right: 4px; white-space: nowrap; }
+.legend-item { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.legend-item-label { color: #7a9ab8; }
+
+#dot-detail-panel { width: min(700px, calc(100vw - 24px)); margin-top: 18px; background: #0c1420; border: 1px solid #1a2d42; border-radius: 10px; overflow: hidden; display: none; }
+#dot-detail-panel.visible { display: block; }
+.detail-header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid #1a2d42; flex-wrap: wrap; }
+.detail-dot-swatch { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; border: 1.5px solid #7dd3fc; }
+.detail-dot-name { font-family: ‘Syne’, sans-serif; font-weight: 800; font-size: clamp(12px, 2vw, 14px); color: #f0f6ff; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 80px; }
+.detail-state-badge { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: #f59e0b; background: #1a2d0e; border: 1px solid #3a5010; padding: 2px 7px; border-radius: 4px; flex-shrink: 0; }
+.detail-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.detail-field { display: flex; flex-direction: column; gap: 4px; }
+.detail-field-label { font-size: 8px; letter-spacing: 0.18em; text-transform: uppercase; color: #2d4a60; }
+.detail-field-value { background: #080f18; border: 1px solid #1a2d42; border-radius: 6px; color: #c8d8e8; font-family: ‘DM Mono’, monospace; font-size: 11px; padding: 7px 10px; line-height: 1.5; min-height: 32px; }
+.detail-field-value.multiline { min-height: 72px; white-space: pre-wrap; }
+.detail-field-value.empty { color: #1e3550; font-style: italic; }
+.detail-fields-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.detail-fields-row .detail-field { flex: 1; min-width: 120px; }
+#selection-panel { width: min(700px, calc(100vw - 24px)); margin-top: 18px; background: #0c1420; border: 1px solid #1a2d42; border-radius: 10px; overflow: hidden; display: none; }
+#selection-panel.visible { display: block; }
+.panel-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; border-bottom: 1px solid #1a2d42; font-size: 8px; letter-spacing: 0.18em; text-transform: uppercase; color: #2d4a60; flex-wrap: wrap; gap: 4px; }
+.panel-header span { color: #f59e0b; font-family: ‘Syne’, sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 0; }
+#selection-list { display: flex; flex-wrap: wrap; gap: 10px; padding: 12px 14px; max-height: 300px; overflow-y: auto; }
+#selection-list::-webkit-scrollbar { width: 4px; }
+#selection-list::-webkit-scrollbar-thumb { background: #1e3550; border-radius: 2px; }
+.sel-chip { background: #0f1e2e; border: 1px solid #1e3550; border-radius: 8px; padding: 8px 10px; min-width: 130px; max-width: 200px; flex: 1; }
+.sel-chip.full { border-color: #92400e; background: #130e04; }
+.chip-header { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
+.chip-abbr { color: #f59e0b; font-family: ‘Syne’, sans-serif; font-weight: 800; font-size: 12px; }
+.chip-count { color: #2d4060; font-size: 9px; margin-left: auto; }
+.chip-dots { display: grid; grid-template-columns: repeat(3, 7px); gap: 3px; margin-bottom: 7px; }
+.chip-dot { width: 7px; height: 7px; border-radius: 50%; background: #f59e0b; }
+.chip-dot.empty { background: #182534; border: 1px solid #243c56; }
+.chip-dot.named { box-shadow: 0 0 0 1.5px #7dd3fc; }
+.chip-dot-list { display: flex; flex-direction: column; gap: 3px; border-top: 1px solid #1a2d42; padding-top: 6px; }
+.chip-dot-row { display: flex; align-items: center; gap: 5px; font-size: 9px; padding: 2px 3px; border-radius: 3px; cursor: pointer; transition: background 0.15s; }
+.chip-dot-row:hover { background: #1a2d42; }
+.chip-dot-row.active-detail { background: #1a2d42; outline: 1px solid #f59e0b; outline-offset: -1px; }
+.dot-pill { width: 6px; height: 6px; border-radius: 50%; background: #f59e0b; flex-shrink: 0; }
+.dot-pill.named { box-shadow: 0 0 0 1.5px #7dd3fc; }
+.dot-label { color: #c8d8e8; }
+.dot-info { font-size: 8px; color: #4a6880; margin-left: 11px; margin-top: 1px; line-height: 1.3; }
+.dot-info-label { color: #2d5070; margin-right: 3px; text-transform: uppercase; font-size: 7px; letter-spacing: 0.08em; }
+@media (max-width: 480px) { .subtitle { display: none; } .stats { border-radius: 8px; } .sel-chip { min-width: 110px; } }
+</style>
+
+</head>
+<body>
+<header>
+  <div class="eyebrow">Interactive Cartogram · State Courts of Last Resort</div>
+  <h1>Seats of the States</h1>
+  <p class="subtitle">Click a dot to select · Hover to see name · Click randomize to combine all</p>
+</header>
+
+<div id="color-toolbar">
+  <span class="toolbar-label">Color by…</span>
+</div>
+
+<div id="theme-legend"></div>
+
+<svg id="map-svg"></svg>
+
+<div class="stats">
+  <div class="stat"><div class="stat-val" id="dot-count">0</div><div class="stat-lbl">Justices* Lit</div></div>
+  <div class="stat"><div class="stat-val" id="total-dots">0</div><div class="stat-lbl">Total Justices*</div></div>
+  <button class="clr-btn" onclick="clearAll()">Clear</button>
+  <button class="rnd-btn" id="rnd-btn" onclick="toggleRandomize()">Randomize</button>
+</div>
+<div class="legend">
+  <span><span class="ld" style="background:#182534;border:1px solid #243c56;box-sizing:border-box"></span>Vacant</span>
+  <span><span class="ld" style="background:#f59e0b"></span>Selected</span>
+  <span><span class="ld" style="background:#ff0000"></span>GOP</span>
+  <span><span class="ld" style="background:#0000ff"></span>DEM</span>
+  <span><span class="ld" style="background:#FFFF00;border:1px solid #b8b800;box-sizing:border-box"></span>Independent/Indeterminant</span>
+</div>
+<div id="dot-detail-panel">
+  <div class="detail-header">
+    <div class="detail-dot-swatch" id="detail-swatch"></div>
+    <div class="detail-dot-name" id="detail-dot-name">—</div>
+    <div class="detail-state-badge" id="detail-state-badge">—</div>
+  </div>
+  <div class="detail-body" id="detail-body"></div>
+</div>
+<div id="selection-panel">
+  <div class="panel-header">
+    <div>Selected Justices*</div>
+    <div><span id="panel-dot-count">0</span> Justices*</div>
+  </div>
+  <div id="selection-list"></div>
+</div>
+<div id="tooltip"></div>
+
+<script>
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║          HOW DOT COLORS WORK — READ FIRST               ║
+// ║                                                          ║
+// ║  • DOT_INDEX starts at 0  (dot 1 = 0, dot 2 = 1, …)    ║
+// ║  • Format:  "STATE_ABBR-DOT_INDEX" : "#COLOR"           ║
+// ║  • Example: "TX-0": "#ff0000"  ← Texas dot 1, red       ║
+// ║  • Use any CSS color: "#ff0000", "blue", "rgb(…)", etc. ║
+// ║                                                          ║
+// ║  Two buttons, two sections below — each is independent. ║
+// ║  Click a button in the toolbar to activate its colors.  ║
+// ╚══════════════════════════════════════════════════════════╝
+
+
+// ============================================================
+// ★ BUTTON 1 — "Affiliation"
+//   Colors shown when the AFFILIATION button is active.
+// ============================================================
+
+// ── AFFILIATION: Legend labels (shown below toolbar) ────────
+//   Add one line per color category you use.
+//   Format: { color: "#hex", label: "Your Label" }
+const AFFILIATION_LEGEND = [
+  // { color: "#ff0000", label: "Republican" },
+  // { color: "#0000ff", label: "Democrat" },
+  // { color: "#FFFF00", label: "Independent" },
+];
+
+// ── AFFILIATION: Whole-state colors ─────────────────────────
+//   Sets ALL dots in a state to one color.
+//   Format: "STATE_ABBR": "#COLOR"
+const AFFILIATION_STATES = {
+  // "TX": "#ff0000",   // every Texas dot → red
+  // "NY": "#0000ff",   // every New York dot → blue
+  // "OH": "#FFFF00",   // every Ohio dot → yellow
+};
+
+// ── AFFILIATION: Individual dot colors ──────────────────────
+//   Sets ONE specific dot. Overrides the state color above.
+//   Format: "STATE_ABBR-DOT_INDEX": "#COLOR"
+const AFFILIATION_DOTS = {
+  // "TX-0": "#ff0000",
+  // "TX-1": "#ff0000",
+  // "NY-0": "#0000ff",
+  // "OH-2": "#FFFF00",
+
+"AL-0": "#ff0000",
+"AL-1": "#ff0000",
+"AL-2": "#ff0000",
+"AL-3": "#ff0000",
+"AL-4": "#ff0000",
+"AL-5": "#ff0000",
+"AL-6": "#ff0000",
+"AL-7": "#ff0000",
+"AL-8": "#ff0000",
+
+"AK-0": "#FFFF00",
+"AK-1": "#ff0000",
+"AK-2": "#ff0000",
+"AK-3": "#ff0000",
+"AK-4": "#ff0000",
+
+"AZ-0": "#ff0000",
+"AZ-1": "#ff0000",
+"AZ-2": "#ff0000",
+"AZ-3": "#ff0000",
+"AZ-4": "#ff0000",
+"AZ-5": "#ff0000",
+"AZ-6": "#0000ff",
+
+"AR-0": "#FFFF00",
+"AR-1": "#FFFF00",
+"AR-2": "#ff0000",
+"AR-3": "#ff0000",
+"AR-4": "#ff0000",
+"AR-5": "#ff0000",
+"AR-6": "#ff0000",
+
+"CA-0": "#0000ff",
+"CA-1": "#ff0000",
+"CA-2": "#0000ff",
+"CA-3": "#0000ff",
+"CA-4": "#0000ff",
+"CA-5": "#0000ff",
+
+"CO-0": "#0000ff",
+"CO-1": "#ff0000",
+"CO-2": "#0000ff",
+"CO-3": "#0000ff",
+"CO-4": "#FFFF00",
+"CO-5": "#FFFF00",
+"CO-6": "#FFFF00",
+
+"CT-0": "#0000ff",
+"CT-1": "#0000ff",
+"CT-2": "#0000ff",
+"CT-3": "#0000ff",
+"CT-4": "#0000ff",
+"CT-5": "#0000ff",
+"CT-6": "#0000ff",
+
+"DC-0": "#FFFF00",
+"DC-1": "#FFFF00",
+"DC-2": "#FFFF00",
+"DC-3": "#FFFF00",
+"DC-4": "#FFFF00",
+"DC-5": "#FFFF00",
+
+"DE-0": "#0000ff",
+"DE-1": "#ff0000",
+"DE-2": "#ff0000",
+"DE-3": "#0000ff",
+"DE-4": "#0000ff",
+
+"FL-0": "#ff0000",
+"FL-1": "#ff0000",
+"FL-2": "#ff0000",
+"FL-3": "#ff0000",
+"FL-4": "#ff0000",
+"FL-5": "#ff0000",
+"FL-6": "#ff0000",
+
+"GA-0": "#ff0000",
+"GA-1": "#ff0000",
+"GA-2": "#ff0000",
+"GA-3": "#FFFF00",
+"GA-4": "#ff0000",
+"GA-5": "#ff0000",
+"GA-6": "#ff0000",
+"GA-7": "#ff0000",
+"GA-8": "#ff0000",
+
+"HI-0": "#0000ff",
+"HI-1": "#0000ff",
+"HI-2": "#0000ff",
+"HI-3": "#0000ff",
+
+"ID-0": "#ff0000",
+"ID-1": "#FFFF00",
+"ID-2": "#ff0000",
+"ID-3": "#ff0000",
+"ID-4": "#ff0000",
+
+"IL-0": "#0000ff",
+"IL-1": "#0000ff",
+"IL-2": "#0000ff",
+"IL-3": "#0000ff",
+"IL-4": "#0000ff",
+"IL-5": "#ff0000",
+"IL-6": "#ff0000",
+
+"IN-0": "#ff0000",
+"IN-1": "#ff0000",
+"IN-2": "#ff0000",
+"IN-3": "#ff0000",
+"IN-4": "#ff0000",
+
+"IA-0": "#ff0000",
+"IA-1": "#ff0000",
+"IA-2": "#ff0000",
+"IA-3": "#ff0000",
+"IA-4": "#ff0000",
+"IA-5": "#ff0000",
+"IA-6": "#ff0000",
+
+"KS-0": "#0000ff",
+"KS-1": "#0000ff",
+"KS-2": "#0000ff",
+"KS-3": "#FFFF00",
+
+"KS-5": "#ff0000",
+"KS-6": "#ff0000",
+
+"KY-0": "#ff0000",
+"KY-1": "#ff0000",
+"KY-2": "#0000ff",
+"KY-3": "#ff0000",
+"KY-4": "#FFFF00",
+"KY-5": "#0000ff",
+"KY-6": "#0000ff",
+"LA-0": "#FFFF00",
+"LA-1": "#ff0000",
+"LA-2": "#0000ff",
+"LA-3": "#ff0000",
+"LA-4": "#ff0000",
+"LA-5": "#ff0000",
+"LA-6": "#0000ff",
+
+"ME-0": "#0000ff",
+"ME-1": "#0000ff",
+"ME-2": "#0000ff",
+"ME-3": "#0000ff",
+"ME-4": "#0000ff",
+"ME-5": "#0000ff",
+
+"ME-7": "#FFFF00",
+"ME-8": "#FFFF00",
+"ME-9": "#0000ff",
+
+"MD-0": "#0000ff",
+"MD-1": "#FFFF00",
+"MD-2": "#FFFF00",
+"MD-3": "#FFFF00",
+"MD-4": "#FFFF00",
+"MD-5": "#0000ff",
+"MD-6": "#FFFF00",
+
+"MA-0": "#0000ff",
+"MA-1": "#0000ff",
+"MA-2": "#ff0000",
+"MA-3": "#FFFF00",
+"MA-4": "#FFFF00",
+"MA-5": "#0000ff",
+"MA-6": "#0000ff",
+
+"MI-0": "#0000ff",
+"MI-1": "#ff0000",
+"MI-2": "#0000ff",
+"MI-3": "#0000ff",
+"MI-4": "#0000ff",
+"MI-5": "#0000ff",
+"MI-6": "#0000ff",
+
+"MN-0": "#0000ff",
+"MN-1": "#FFFF00",
+"MN-2": "#FFFF00",
+"MN-3": "#FFFF00",
+"MN-4": "#0000ff",
+"MN-5": "#FFFF00",
+"MN-6": "#0000ff",
+
+"MS-0": "#ff0000",
+"MS-1": "#0000ff",
+"MS-2": "#ff0000",
+"MS-3": "#FFFF00",
+"MS-4": "#ff0000",
+"MS-5": "#ff0000",
+
+
+"MS-8": "#ff0000",
+
+"MO-0": "#ff0000",
+"MO-1": "#0000ff",
+"MO-2": "#ff0000",
+"MO-3": "#FFFF00",
+"MO-4": "#FFFF00",
+"MO-5": "#ff0000",
+"MO-6": "#ff0000",
+
+"MT-0": "#ff0000",
+"MT-1": "#ff0000",
+"MT-2": "#0000ff",
+"MT-3": "#FFFF00",
+"MT-4": "#0000ff",
+"MT-5": "#0000ff",
+"MT-6": "#0000ff",
+
+"NE-0": "#ff0000",
+"NE-1": "#ff0000",
+"NE-2": "#FFFF00",
+"NE-3": "#ff0000",
+"NE-4": "#ff0000",
+"NE-5": "#FFFF00",
+"NE-6": "#ff0000",
+
+"NV-0": "#ff0000",
+"NV-1": "#FFFF00",
+"NV-2": "#ff0000",
+"NV-3": "#0000ff",
+"NV-4": "#ff0000",
+"NV-5": "#FFFF00",
+"NV-6": "#0000ff",
+
+"NH-0": "#ff0000",
+"NH-1": "#ff0000",
+"NH-2": "#ff0000",
+"NH-3": "#ff0000",
+"NH-4": "#ff0000",
+
+"NJ-0": "#0000ff",
+"NJ-1": "#ff0000",
+"NJ-2": "#0000ff",
+"NJ-3": "#0000ff",
+"NJ-4": "#ff0000",
+"NJ-5": "#0000ff",
+"NJ-6": "#FFFF00",
+
+"NM-0": "#0000ff",
+"NM-1": "#0000ff",
+"NM-2": "#0000ff",
+"NM-3": "#0000ff",
+"NM-4": "#0000ff",
+
+"NY-0": "#0000ff",
+"NY-1": "#0000ff",
+"NY-2": "#ff0000",
+"NY-3": "#0000ff",
+"NY-4": "#0000ff",
+"NY-5": "#0000ff",
+"NY-6": "#0000ff",
+
+"NC-0": "#ff0000",
+"NC-1": "#0000ff",
+"NC-2": "#ff0000",
+"NC-3": "#ff0000",
+"NC-4": "#ff0000",
+"NC-5": "#ff0000",
+"NC-6": "#0000ff",
+
+"ND-0": "#ff0000",
+"ND-1": "#ff0000",
+"ND-2": "#FFFF00",
+"ND-3": "#FFFF00",
+"ND-4": "#FFFF00",
+
+"OH-0": "#ff0000",
+"OH-1": "#ff0000",
+"OH-2": "#ff0000",
+"OH-3": "#0000ff",
+"OH-4": "#ff0000",
+"OH-5": "#ff0000",
+"OH-6": "#ff0000",
+
+"OK-0": "#ff0000",
+"OK-1": "#ff0000",
+"OK-2": "#ff0000",
+"OK-3": "#FFFF00",
+"OK-4": "#ff0000",
+"OK-5": "#ff0000",
+"OK-6": "#0000ff",
+"OK-7": "#0000ff",
+"OK-8": "#ff0000",
+
+"OR-0": "#0000ff",
+"OR-1": "#0000ff",
+"OR-2": "#0000ff",
+"OR-3": "#FFFF00",
+"OR-4": "#0000ff",
+"OR-5": "#0000ff",
+"OR-6": "#0000ff",
+
+"PA-0": "#0000ff",
+"PA-1": "#0000ff",
+"PA-2": "#0000ff",
+"PA-3": "#0000ff",
+"PA-4": "#ff0000",
+"PA-5": "#ff0000",
+"PA-6": "#0000ff",
+
+"RI-0": "#ff0000",
+"RI-1": "#ff0000",
+"RI-2": "#0000ff",
+"RI-3": "#FFFF00",
+
+
+"SC-0": "#ff0000",
+"SC-1": "#ff0000",
+"SC-2": "#ff0000",
+"SC-3": "#FFFF00",
+"SC-4": "#FFFF00",
+
+"SD-0": "#ff0000",
+"SD-1": "#FFFF00",
+"SD-2": "#ff0000",
+"SD-3": "#ff0000",
+"SD-4": "#FFFF00",
+
+"TN-0": "#ff0000",
+"TN-1": "#ff0000",
+"TN-2": "#ff0000",
+"TN-3": "#ff0000",
+"TN-4": "#ff0000",
+
+"TX-0": "#ff0000",
+"TX-1": "#ff0000",
+"TX-2": "#ff0000",
+"TX-3": "#ff0000",
+"TX-4": "#ff0000",
+"TX-5": "#ff0000",
+"TX-6": "#ff0000",
+"TX-7": "#ff0000",
+"TX-8": "#ff0000",
+
+"UT-0": "#FFFF00",
+"UT-1": "#FFFF00",
+"UT-2": "#FFFF00",
+"UT-3": "#FFFF00", 
+
+
+"VT-0": "#ff0000",
+"VT-1": "#FFFF00",
+"VT-2": "#FFFF00",
+"VT-3": "#ff0000",
+"VT-4": "#ff0000",
+
+"VA-0": "#0000ff",
+"VA-1": "#ff0000",
+"VA-2": "#ff0000",
+"VA-3": "#ff0000",
+"VA-4": "#ff0000",
+"VA-5": "#FFFF00",
+"VA-6": "#FFFF00",
+
+
+
+"WA-0": "#0000ff",
+"WA-1": "#0000ff",
+"WA-2": "#0000ff",
+"WA-3": "#0000ff",
+"WA-4": "#0000ff",
+"WA-5": "#0000ff",
+"WA-6": "#0000ff",
+"WA-7": "#0000ff",
+"WA-8": "#0000ff",
+
+"WV-0": "#ff0000",
+"WV-1": "#0000ff",
+"WV-2": "#ff0000",
+"WV-3": "#ff0000",
+"WV-4": "#ff0000",
+
+"WI-0": "#0000ff",
+"WI-1": "#ff0000",
+"WI-2": "#ff0000",
+"WI-3": "#0000ff",
+"WI-4": "#ff0000",
+"WI-5": "#0000ff",
+"WI-6": "#0000ff",
+
+"WY-0": "#FFFF00",
+"WY-1": "#ff0000",
+"WY-2": "#FFFF00",
+"WY-3": "#FFFF00",
+"WY-4": "#ff0000",
+
+"OKC-0": "#ff0000",
+"OKC-1": "#FFFF00",
+"OKC-2": "#ff0000",
+"OKC-3": "#ff0000",
+"OKC-4": "#FFFF00",
+
+"TXC-0": "#ff0000",
+"TXC-1": "#ff0000",
+"TXC-2": "#ff0000",
+"TXC-3": "#ff0000",
+"TXC-4": "#ff0000",
+"TXC-5": "#ff0000",
+"TXC-6": "#ff0000",
+"TXC-7": "#ff0000",
+"TXC-8": "#ff0000",
+
+"DC-0": "#FFFF00",
+"DC-1": "#FFFF00",
+"DC-2": "#FFFF00",
+"DC-3": "#FFFF00",
+"DC-4": "#FFFF00",
+"DC-5": "#FFFF00",
+"DC-6": "#FFFF00",
+};
+
+
+// ============================================================
+// ★ BUTTON 2 — "Appointment"
+//   Colors shown when the APPOINTMENT button is active.
+// ============================================================
+
+// ── APPOINTMENT: Legend labels (shown below toolbar) ────────
+//   Add one line per color category you use.
+//   Format: { color: "#hex", label: "Your Label" }
+const APPOINTMENT_LEGEND = [
+  // { color: "#22c55e", label: "Elected" },
+  // { color: "#a855f7", label: "Appointed" },
+  // { color: "#f97316", label: "Merit Selected" },
+];
+
+// ── APPOINTMENT: Whole-state colors ─────────────────────────
+//   Sets ALL dots in a state to one color.
+//   Format: "STATE_ABBR": "#COLOR"
+const APPOINTMENT_STATES = {
+  // "TX": "#22c55e",   // every Texas dot → green
+  // "NY": "#a855f7",   // every New York dot → purple
+  // "OH": "#f97316",   // every Ohio dot → orange
+
+};
+
+// ── APPOINTMENT: Individual dot colors ──────────────────────
+//   Sets ONE specific dot. Overrides the state color above.
+//   Format: "STATE_ABBR-DOT_INDEX": "#COLOR"
+const APPOINTMENT_DOTS = {
+"AL-0": "#FFFF00",
+"AL-1": "#FFFF00",
+"AL-2": "#FFFF00",
+"AL-3": "#FF0000",
+"AL-4": "#FF0000",
+"AL-5": "#FFFF00",
+"AL-6": "#FFFF00",
+"AL-7": "#FFFF00",
+"AL-8": "#FF0000",
+
+"AK-0": "#FFFF00",
+"AK-1": "#FF0000",
+"AK-2": "#FF0000",
+"AK-3": "#FF0000",
+"AK-4": "#FF0000",
+
+"AZ-0": "#FF0000",
+"AZ-1": "#FF0000",
+"AZ-2": "#FF0000",
+"AZ-3": "#FF0000",
+"AZ-4": "#FF0000",
+"AZ-5": "#FF0000",
+"AZ-6": "#0000FF",
+
+"AR-0": "#FFFF00",
+"AR-1": "#FFFF00",
+"AR-2": "#FF0000",
+"AR-3": "#FFFF00",
+"AR-4": "#FFFF00",
+"AR-5": "#FF0000",
+"AR-6": "#FFFF00",
+
+"CA-0": "#0000FF",
+"CA-1": "#FF0000",
+"CA-2": "#0000FF",
+"CA-3": "#0000FF",
+"CA-4": "#0000FF",
+"CA-5": "#0000FF",
+
+
+"CO-0": "#0000FF",
+"CO-1": "#0000FF",
+"CO-2": "#0000FF",
+"CO-3": "#0000FF",
+"CO-4": "#0000FF",
+"CO-5": "#0000FF",
+"CO-6": "#0000FF",
+
+"CT-0": "#0000FF",
+"CT-1": "#0000FF",
+"CT-2": "#0000FF",
+"CT-3": "#0000FF",
+"CT-4": "#0000FF",
+"CT-5": "#0000FF",
+"CT-6": "#0000FF",
+
+"DE-0": "#0000FF",
+"DE-1": "#0000FF",
+"DE-2": "#0000FF",
+"DE-3": "#0000FF",
+"DE-4": "#0000FF",
+
+"FL-0": "#FF0000",
+"FL-1": "#FF0000",
+"FL-2": "#FF0000",
+"FL-3": "#FF0000",
+"FL-4": "#FF0000",
+"FL-5": "#FF0000",
+"FL-6": "#FF0000",
+
+"GA-0": "#FF0000",
+"GA-1": "#FF0000",
+"GA-2": "#FF0000",
+"GA-3": "#FFFF00",
+"GA-4": "#FF0000",
+"GA-5": "#FF0000",
+"GA-6": "#FF0000",
+"GA-7": "#FF0000",
+"GA-8": "#FF0000",
+
+"HI-0": "#0000FF",
+"HI-1": "#0000FF",
+"HI-2": "#0000FF",
+"HI-3": "#0000FF",
+
+
+"ID-0": "#FF0000",
+"ID-1": "#FFFF00",
+"ID-2": "#FF0000",
+"ID-3": "#FF0000",
+"ID-4": "#FF0000",
+
+"IL-0": "#0000FF",
+"IL-1": "#0000FF",
+"IL-2": "#0000FF",
+"IL-3": "#FFFF00",
+"IL-4": "#FFFF00",
+"IL-5": "#0000FF",
+"IL-6": "#FFFF00",
+
+"IN-0": "#FF0000",
+"IN-1": "#FF0000",
+"IN-2": "#FF0000",
+"IN-3": "#FF0000",
+"IN-4": "#FF0000",
+
+"IA-0": "#FF0000",
+"IA-1": "#FF0000",
+"IA-2": "#FF0000",
+"IA-3": "#FF0000",
+"IA-4": "#FF0000",
+"IA-5": "#FF0000",
+"IA-6": "#FF0000",
+
+"KS-0": "#0000FF",
+"KS-1": "#0000FF",
+"KS-2": "#0000FF",
+"KS-3": "#0000FF",
+"KS-4": "#0000FF",
+"KS-5": "#0000FF",
+"KS-6": "#FF0000",
+
+"KY-0": "#FFFF00",
+"KY-1": "#FFFF00",
+"KY-2": "#FFFF00",
+"KY-3": "#FFFF00",
+"KY-4": "#FFFF00",
+"KY-5": "#FFFF00",
+"KY-6": "#0000FF",
+
+"LA-0": "#FFFF00",
+"LA-1": "#FF0000",
+"LA-2": "#FFFF00",
+"LA-3": "#FFFF00",
+"LA-4": "#FFFF00",
+"LA-5": "#FFFF00",
+"LA-6": "#FFFF00",
+
+"ME-0": "#0000FF",
+"ME-1": "#0000FF",
+"ME-2": "#0000FF",
+"ME-3": "#0000FF",
+"ME-4": "#0000FF",
+"ME-5": "#0000FF",
+
+"ME-7": "#FF0000",
+"ME-8": "#FF0000",
+"ME-9": "#0000FF",
+
+"MD-0": "#FF0000",
+"MD-1": "#FF0000",
+"MD-2": "#FF0000",
+"MD-3": "#0000FF",
+"MD-4": "#FF0000",
+"MD-5": "#0000FF",
+"MD-6": "#FF0000",
+
+"MA-0": "#FF0000",
+"MA-1": "#FF0000",
+"MA-2": "#FF0000",
+"MA-3": "#FF0000",
+"MA-4": "#FF0000",
+"MA-5": "#0000FF",
+"MA-6": "#0000FF",
+
+"MI-0": "#FFFF00",
+"MI-1": "#FF0000",
+"MI-2": "#FFFF00",
+"MI-3": "#FFFF00",
+"MI-4": "#0000FF",
+"MI-5": "#FFFF00",
+"MI-6": "#0000FF",
+
+"MN-0": "#0000FF",
+"MN-1": "#0000FF",
+"MN-2": "#0000FF",
+"MN-3": "#0000FF",
+"MN-4": "#0000FF",
+"MN-5": "#0000FF",
+"MN-6": "#0000FF",
+
+"MS-0": "#FF0000",
+"MS-1": "#FF0000",
+"MS-2": "#FFFF00",
+"MS-3": "#FF0000",
+"MS-4": "#FFFF00",
+"MS-5": "#FF0000",
+
+
+"MS-8": "#FFFF00",
+
+"MO-0": "#FF0000",
+"MO-1": "#0000FF",
+"MO-2": "#FF0000",
+"MO-3": "#0000FF",
+"MO-4": "#FF0000",
+"MO-5": "#FF0000",
+"MO-6": "#FF0000",
+
+"MT-0": "#FFFF00",
+"MT-1": "#FF0000",
+"MT-2": "#FFFF00",
+"MT-3": "#FFFF00",
+"MT-4": "#0000FF",
+"MT-5": "#0000FF",
+"MT-6": "#FFFF00",
+
+"NE-0": "#FF0000",
+"NE-1": "#FF0000",
+"NE-2": "#FF0000",
+"NE-3": "#FF0000",
+"NE-4": "#FF0000",
+"NE-5": "#FF0000",
+"NE-6": "#FF0000",
+
+"NV-0": "#FFFF00",
+"NV-1": "#FFFF00",
+"NV-2": "#FFFF00",
+"NV-3": "#FFFF00",
+"NV-4": "#FFFF00",
+"NV-5": "#0000FF",
+"NV-6": "#FF0000",
+
+"NH-0": "#FF0000",
+"NH-1": "#FF0000",
+"NH-2": "#FF0000",
+"NH-3": "#FF0000",
+"NH-4": "#FF0000",
+
+"NJ-0": "#0000FF",
+"NJ-1": "#FF0000",
+"NJ-2": "#0000FF",
+"NJ-3": "#0000FF",
+"NJ-4": "#0000FF",
+"NJ-5": "#0000FF",
+"NJ-6": "#0000FF",
+
+"NM-0": "#0000FF",
+"NM-1": "#FFFF00",
+"NM-2": "#0000FF",
+"NM-3": "#0000FF",
+"NM-4": "#0000FF",
+
+"NY-0": "#0000FF",
+"NY-1": "#0000FF",
+"NY-2": "#0000FF",
+"NY-3": "#0000FF",
+"NY-4": "#0000FF",
+"NY-5": "#0000FF",
+"NY-6": "#0000FF",
+
+"NC-0": "#FFFF00",
+"NC-1": "#FFFF00",
+"NC-2": "#FFFF00",
+"NC-3": "#FFFF00",
+"NC-4": "#FFFF00",
+"NC-5": "#FFFF00",
+"NC-6": "#0000FF",
+
+"ND-0": "#FF0000",
+"ND-1": "#FFFF00",
+"ND-2": "#FF0000",
+"ND-3": "#FF0000",
+"ND-4": "#FF0000",
+
+"OH-0": "#FFFF00",
+"OH-1": "#FFFF00",
+"OH-2": "#FFFF00",
+"OH-3": "#FFFF00",
+"OH-4": "#FF0000",
+"OH-5": "#FFFF00",
+"OH-6": "#FFFF00",
+
+"OK-0": "#FF0000",
+"OK-1": "#FF0000",
+"OK-2": "#FF0000",
+"OK-3": "#0000FF",
+"OK-4": "#FF0000",
+"OK-5": "#FF0000",
+"OK-6": "#0000FF",
+"OK-7": "#0000FF",
+"OK-8": "#FF0000",
+
+"OR-0": "#0000FF",
+"OR-1": "#0000FF",
+"OR-2": "#0000FF",
+"OR-3": "#0000FF",
+"OR-4": "#0000FF",
+"OR-5": "#0000FF",
+"OR-6": "#0000FF",
+
+"PA-0": "#FFFF00",
+"PA-1": "#FFFF00",
+"PA-2": "#FFFF00",
+"PA-3": "#FFFF00",
+"PA-4": "#0000FF",
+"PA-5": "#FFFF00",
+"PA-6": "#FFFF00",
+
+"RI-0": "#FF0000",
+"RI-1": "#FF0000",
+"RI-2": "#0000FF",
+"RI-3": "#0000FF",
+
+
+"SC-0": "#FF0000",
+"SC-1": "#FF0000",
+"SC-2": "#FF0000",
+"SC-3": "#FF0000",
+"SC-4": "#FF0000",
+
+"SD-0": "#FF0000",
+"SD-1": "#FF0000",
+"SD-2": "#FF0000",
+"SD-3": "#FF0000",
+"SD-4": "#FF0000",
+
+"TN-0": "#FF0000",
+"TN-1": "#FF0000",
+"TN-2": "#FF0000",
+"TN-3": "#FF0000",
+"TN-4": "#FF0000",
+
+"TX-0": "#FF0000",
+"TX-1": "#FF0000",
+"TX-2": "#FF0000",
+"TX-3": "#FFFF00",
+"TX-4": "#FF0000",
+"TX-5": "#FF0000",
+"TX-6": "#FF0000",
+"TX-7": "#FF0000",
+"TX-8": "#FF0000",
+
+"UT-0": "#FF0000",
+"UT-1": "#FF0000",
+"UT-2": "#FF0000",
+"UT-3": "#FF0000",
+
+
+"VT-0": "#FF0000",
+"VT-1": "#0000FF",
+"VT-2": "#FF0000",
+"VT-3": "#FF0000",
+"VT-4": "#FF0000",
+
+"VA-0": "#FFFF00",
+"VA-1": "#FF0000",
+"VA-2": "#FF0000",
+"VA-3": "#FF0000",
+"VA-4": "#FFFF00",
+"VA-5": "#FFFF00",
+"VA-6": "#0000FF",
+
+
+
+"WA-0": "#0000FF",
+"WA-1": "#FFFF00",
+"WA-2": "#0000FF",
+"WA-3": "#FFFF00",
+"WA-4": "#0000FF",
+"WA-5": "#0000ff",
+"WA-6": "#0000FF",
+"WA-7": "#0000FF",
+"WA-8": "#FFFF00",
+
+"WV-0": "#FF0000",
+"WV-1": "#FFFF00",
+"WV-2": "#FFFF00",
+"WV-3": "#FF0000",
+"WV-4": "#FF0000",
+
+"WI-0": "#FFFF00",
+"WI-1": "#FFFF00",
+"WI-2": "#FF0000",
+"WI-3": "#FFFF00",
+"WI-4": "#FFFF00",
+"WI-5": "#FFFF00",
+"WI-6": "#FFFF00",
+
+"WY-0": "#FF0000",
+"WY-1": "#FF0000",
+"WY-2": "#FF0000",
+"WY-3": "#FF0000",
+"WY-4": "#FF0000",
+
+"OKC-0": "#FF0000",
+"OKC-1": "#FF0000",
+"OKC-2": "#FF0000",
+"OKC-3": "#FF0000",
+"OKC-4": "#0000FF",
+
+"TXC-0": "#FFFF00",
+"TXC-1": "#FFFF00",
+"TXC-2": "#FFFF00",
+"TXC-3": "#FFFF00",
+"TXC-4": "#FFFF00",
+"TXC-5": "#FF0000",
+"TXC-6": "#FFFF00",
+"TXC-7": "#FFFF00",
+"TXC-8": "#FFFF00",
+
+"DC-0": "#FF0000",
+"DC-1": "#0000FF",
+"DC-2": "#0000FF",
+"DC-3": "#0000FF",
+"DC-4": "#FF0000",
+"DC-5": "#0000FF",
+"DC-6": "#0000FF",
+};
+
+
+// ============================================================
+// ── END OF COLOR CONFIGURATION — do not edit below this line
+// ============================================================
+
+// Assemble themes from the named sections above
+const COLOR_THEMES = [
+  {
+    name: "Affiliation",
+    legend: AFFILIATION_LEGEND,
+    states: AFFILIATION_STATES,
+    dots:   AFFILIATION_DOTS,
+  },
+  {
+    name: "Appointment",
+    legend: APPOINTMENT_LEGEND,
+    states: APPOINTMENT_STATES,
+    dots:   APPOINTMENT_DOTS,
+  },
+];
+
+// No always-on individual colors needed — use the theme sections above
+const INDIVIDUAL_DOT_COLORS = {};
+
+const DEFAULT_DOT_COLOR = "#f59e0b";
+let activeThemeIndex = 0;
+
+function getThemeColor(abbr, i) {
+  if (activeThemeIndex < 0) return null;
+  const theme = COLOR_THEMES[activeThemeIndex];
+  const key = `${abbr}-${i}`;
+  if (theme.dots   && theme.dots[key])    return theme.dots[key];
+  if (theme.states && theme.states[abbr]) return theme.states[abbr];
+  return null;
+}
+
+function getDotColor(abbr, i) {
+  // Theme colors take priority, then individual dot colors, then default
+  return getThemeColor(abbr, i)
+    || INDIVIDUAL_DOT_COLORS[`${abbr}-${i}`]
+    || DEFAULT_DOT_COLOR;
+}
+
+function getFullRingColor(abbr, i) {
+  const base = getDotColor(abbr, i);
+  return base === DEFAULT_DOT_COLOR ? "#fde68a" : "#ffffff";
+}
+
+const toolbar = document.getElementById("color-toolbar");
+const themeLegendEl = document.getElementById("theme-legend");
+
+function renderThemeLegend(themeIdx) {
+  themeLegendEl.innerHTML = "";
+  if (themeIdx < 0) { themeLegendEl.classList.remove("visible"); return; }
+  const theme = COLOR_THEMES[themeIdx];
+  const entries = theme.legend || [];
+  if (entries.length === 0) { themeLegendEl.classList.remove("visible"); return; }
+  const lbl = document.createElement("span");
+  lbl.className = "legend-label";
+  lbl.textContent = theme.name + ":";
+  themeLegendEl.appendChild(lbl);
+  entries.forEach(entry => {
+    const item = document.createElement("div");
+    item.className = "legend-item";
+    const dot = document.createElement("div");
+    dot.className = "legend-dot";
+    dot.style.background = entry.color;
+    const label = document.createElement("span");
+    label.className = "legend-item-label";
+    label.textContent = entry.label;
+    item.appendChild(dot);
+    item.appendChild(label);
+    themeLegendEl.appendChild(item);
+  });
+  themeLegendEl.classList.add("visible");
+}
+
+COLOR_THEMES.forEach((theme, idx) => {
+  const btn = document.createElement("button");
+  btn.className = "theme-btn";
+  btn.dataset.themeIdx = idx;
+  btn.appendChild(document.createTextNode(theme.name));
+  btn.addEventListener("click", () => {
+    if (activeThemeIndex === idx) {
+      activeThemeIndex = -1;
+      btn.classList.remove("active");
+    } else {
+      activeThemeIndex = idx;
+      document.querySelectorAll(".theme-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+    }
+    renderThemeLegend(activeThemeIndex);
+    STATES.forEach(s => { for (let i = 0; i < s.dots; i++) renderDot(s.abbr, i); });
+  });
+  toolbar.appendChild(btn);
+  if(idx === 0) btn.classList.add('active');
+});
+
+const DOT_NAME_COLOR_DEFAULT = "#c8d8e8";
+const DOT_NAME_COLOR_STATES  = {};
+const DOT_NAME_COLOR_DOTS    = {};
+
+function getDotNameColor(abbr, i) {
+  const key = `${abbr}-${i}`;
+  if (DOT_NAME_COLOR_DOTS[key])    return DOT_NAME_COLOR_DOTS[key];
+  if (DOT_NAME_COLOR_STATES[abbr]) return DOT_NAME_COLOR_STATES[abbr];
+  return DOT_NAME_COLOR_DEFAULT;
+}
+
+const DOT_DATA = {
+"AL-0": { field1: "January 11, 2019", field2: "January 19, 2031", notes: " Selection: Partisan Election \n Age: 63 \n Party Affiliation: Republican \n Appointed By: " },
+"AL-1": { field1: "January 24, 2025", field2: "January 19, 2031", notes: " Selection: Partisan Election \n Age: 58 \n Party Affiliation: Republican \n Appointed By: " },
+"AL-2": { field1: "January 11, 2013", field2: "January 19, 2031", notes: " Selection: Partisan Election \n Age: 70 \n Party Affiliation: Republican \n Appointed By: " },
+"AL-3": { field1: "May 25, 2017", field2: "January 19, 2031", notes: " Selection: Partisan Election \n Age: 63 \n Party Affiliation: Republican \n Appointed By: Kay Ivey (R)" },
+"AL-4": { field1: "November 10, 2025", field2: "January 14, 2029", notes: " Selection: Partisan Election \n Age: Unknown \n Party Affiliation: Republican \n Appointed By: Kay Ivey (R)" },
+"AL-5": { field1: "January 17, 2023", field2: "January 14, 2029", notes: " Selection: Partisan Election \n Age: 63 \n Party Affiliation: Republican \n Appointed By: " },
+"AL-6": { field1: "January 17, 2011", field2: "January 14, 2029", notes: " Selection: Partisan Election \n Age: 64 \n Party Affiliation: Republican \n Appointed By: " },
+"AL-7": { field1: "January 20, 2009", field2: "January 17, 2027", notes: " Selection: Partisan Election \n Age: 69 \n Party Affiliation: Republican \n Appointed By: " },
+"AL-8": { field1: "January 15, 2019", field2: "January 17, 2027", notes: " Selection: Partisan Election \n Age: 58 \n Party Affiliation: Republican \n Appointed By: Kay Ivey (R)" },
+
+"AK-0": { field1: "August 26, 2016", field2: "February 1, 2031", notes: " Selection: Missouri Plan \n Age: 65 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Bill Walker (I)" },
+"AK-1": { field1: "July 1, 2020", field2: "February 1, 2035", notes: " Selection: Missouri Plan \n Age: 47 \n Party Affiliation: Republican \n Appointed By: Mike Dunleavy (R)" },
+"AK-2": { field1: "July 7, 2021", field2: "February 1, 2035", notes: " Selection: Missouri Plan \n Age: 50 \n Party Affiliation: Republican \n Appointed By: Mike Dunleavy (R)" },
+"AK-3": { field1: "March 22, 2023", field2: "February 1, 2027", notes: " Selection: Missouri Plan \n Age: 61 \n Party Affiliation: Republican \n Appointed By: Mike Dunleavy (R)" },
+"AK-4": { field1: "January 31, 2025", field2: "February 1, 2029", notes: " Selection: Missouri Plan \n Age: 55 \n Party Affiliation: Republican \n Appointed By: Mike Dunleavy (R)" },
+
+"AZ-0": { field1: "October 12, 2012", field2: "December 31, 2028", notes: " Selection: Missouri Plan \n Age: 66 \n Party Affiliation: Republican \n Appointed By: Jan Brewer (R)" },
+"AZ-1": { field1: "December 19, 2016", field2: "January 3, 2027", notes: " Selection: Missouri Plan \n Age: 58 \n Party Affiliation: Republican \n Appointed By: Doug Ducey (R)" },
+"AZ-2": { field1: "January 6, 2016", field2: "December 26, 2027", notes: " Selection: Missouri Plan \n Age: 69 \n Party Affiliation: Republican \n Appointed By: Doug Ducey (R)" },
+"AZ-3": { field1: "April 26, 2019", field2: "December 31, 2028", notes: " Selection: Missouri Plan \n Age: 61 \n Party Affiliation: Republican \n Appointed By: Doug Ducey (R)" },
+"AZ-4": { field1: "September 6, 2019", field2: "December 31, 2028", notes: " Selection: Missouri Plan \n Age: 59 \n Party Affiliation: Republican \n Appointed By: Doug Ducey (R)" },
+"AZ-5": { field1: "July 8, 2021", field2: "January 5, 2031", notes: " Selection: Missouri Plan \n Age: 46 \n Party Affiliation: Republican \n Appointed By: Doug Ducey (R)" },
+"AZ-6": { field1: "February 3, 2025", field2: "December 31, 2028", notes: " Selection: Missouri Plan \n Age: 54 \n Party Affiliation: Democratic \n Appointed By: Katie Hobbs (D)" },
+
+"AR-0": { field1: "January 1, 2011", field2: "December 31, 2032", notes: " Selection: Non-partisan Election \n Age: 63 \n Party Affiliation: Independent/Indeterminate \n Appointed By: " },
+"AR-1": { field1: "January 1, 2011", field2: "December 31, 2032", notes: " Selection: Non-partisan Election \n Age: 53 \n Party Affiliation: Independent/Indeterminate \n Appointed By: " },
+"AR-2": { field1: "July 3, 2023", field2: "December 31, 2026", notes: " Selection: Non-partisan Election \n Age: 54 \n Party Affiliation: Republican \n Appointed By: Sarah Huckabee Sanders (R)" },
+"AR-3": { field1: "January 1, 2021", field2: "December 31, 2028", notes: " Selection: Non-partisan Election \n Age: 69 \n Party Affiliation: Republican \n Appointed By: " },
+"AR-4": { field1: "January 1, 2017", field2: "December 31, 2032", notes: " Selection: Non-partisan Election \n Age: 54 \n Party Affiliation: Republican \n Appointed By: " },
+"AR-5": { field1: "January 1, 2025", field2: "December 31, 2026", notes: " Selection: Non-partisan Election \n Age: 43 \n Party Affiliation: Republican \n Appointed By: Sarah Huckabee Sanders (R)" },
+"AR-6": { field1: "January 1, 2015", field2: "December 31, 2030", notes: " Selection: Non-partisan Election \n Age: 57 \n Party Affiliation: Republican \n Appointed By: " },
+
+"CA-0": { field1: "March 28, 2022", field2: "January 7, 2035", notes: " Selection: Appointment by Governor with Approval by Commission on Judicial Appointments \n Age: 55 \n Party Affiliation: Democratic \n Appointed By: Gavin Newsom (D)" },
+"CA-1": { field1: "January 4, 2006", field2: "January 5, 2031", notes: " Selection: Appointment by Governor with Approval by Commission on Judicial Appointments \n Age: 78 \n Party Affiliation: Republican \n Appointed By: Arnold Schwarzenegger (R)" },
+"CA-2": { field1: "September 1, 2011", field2: "January 5, 2031", notes: " Selection: Appointment by Governor with Approval by Commission on Judicial Appointments \n Age: 56 \n Party Affiliation: Democratic \n Appointed By: Jerry Brown (D)" },
+"CA-3": { field1: "January 5, 2015", field2: "January 5, 2031", notes: " Selection: Appointment by Governor with Approval by Commission on Judicial Appointments \n Age: 50 \n Party Affiliation: Democratic \n Appointed By: Jerry Brown (D)" },
+"CA-4": { field1: "January 3, 2019", field2: "January 3, 2027", notes: " Selection: Appointment by Governor with Approval by Commission on Judicial Appointments \n Age: 53 \n Party Affiliation: Democratic \n Appointed By: Jerry Brown (D)" },
+"CA-5": { field1: "January 2, 2023", field2: "January 3, 2027", notes: " Selection: Appointment by Governor with Approval by Commission on Judicial Appointments \n Age: 58 \n Party Affiliation: Democratic \n Appointed By: Gavin Newsom (D)" },
+"CA-6": { field1: "", field2: "2026 or 2028 (special)", notes: " Selection: Appointment by Governor with Approval by Commission on Judicial Appointments \n Age:  \n Party Affiliation:  \n Appointed By: " },
+
+"CO-0": { field1: "December 10, 2010", field2: "January 8, 2035", notes: " Selection: Missouri Plan \n Age: 57 \n Party Affiliation: Democratic \n Appointed By: Bill Ritter (D)" },
+"CO-1": { field1: "November 1, 2011", field2: "June 16, 2034", notes: " Selection: Missouri Plan \n Age: 64 \n Party Affiliation: Republican \n Appointed By: John Hickenlooper (D)" },
+"CO-2": { field1: "January 13, 2014", field2: "January 11, 2027", notes: " Selection: Missouri Plan \n Age: 63 \n Party Affiliation: Democratic \n Appointed By: John Hickenlooper (D)" },
+"CO-3": { field1: "September 1, 2015", field2: "January 8, 2029", notes: " Selection: Missouri Plan \n Age: 64 \n Party Affiliation: Democratic \n Appointed By: John Hickenlooper (D)" },
+"CO-4": { field1: "July 2, 2018", field2: "January 13, 2031", notes: " Selection: Missouri Plan \n Age: 59 \n Party Affiliation: Independent/Indeterminate \n Appointed By: John Hickenlooper (D)" },
+"CO-5": { field1: "January 4, 2021", field2: "January 8, 2035", notes: " Selection: Missouri Plan \n Age: 63 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Jared Polis (D)" },
+"CO-6": { field1: "February 17, 2026", field2: "January 13, 2031", notes: " Selection: Missouri Plan \n Age: 49 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Jared Polis (D)" },
+
+"CT-0": { field1: "November 1, 2017", field2: "January 28, 2033", notes: " Selection: Missouri Plan \n Age: 48 \n Party Affiliation: Democratic \n Appointed By: Ned Lamont (D)" },
+"CT-1": { field1: "January 24, 2013", field2: "January 24, 2029", notes: " Selection: Missouri Plan \n Age: 60 \n Party Affiliation: Democratic \n Appointed By: Dannel Malloy (D)" },
+"CT-2": { field1: "April 10, 2017", field2: "April 10, 2033", notes: " Selection: Missouri Plan \n Age: 63 \n Party Affiliation: Democratic \n Appointed By: Dannel Malloy (D)" },
+"CT-3": { field1: "May 3, 2018", field2: "May 3, 2026", notes: " Selection: Missouri Plan \n Age: 65 \n Party Affiliation: Democratic \n Appointed By: Dannel Malloy (D)" },
+"CT-4": { field1: "April 30, 2022", field2: "April 30, 2030", notes: " Selection: Missouri Plan \n Age: 64 \n Party Affiliation: Democratic \n Appointed By: Ned Lamont (D)" },
+"CT-5": { field1: "September 26, 2023", field2: "March 11, 2031", notes: " Selection: Missouri Plan \n Age: 65 \n Party Affiliation: Democratic \n Appointed By: Ned Lamont (D)" },
+"CT-6": { field1: "March 5, 2025", field2: "August 15, 2032", notes: " Selection: Missouri Plan \n Age: 64 \n Party Affiliation: Democratic \n Appointed By: Ned Lamont (D)" },
+
+"DE-0": { field1: "April 14, 2015", field2: "November 8, 2031", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 69 \n Party Affiliation: Democratic \n Appointed By: Jack Markell (D), elavated by Carney" },
+"DE-1": { field1: "July 25, 2014", field2: "July 25, 2026", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 63 \n Party Affiliation: Republican \n Appointed By: Jack Markell (D)" },
+"DE-2": { field1: "July 5, 2017", field2: "July 5, 2029", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 70 \n Party Affiliation: Republican \n Appointed By: John Carney (D)" },
+"DE-3": { field1: "May 11, 2023", field2: "May 11, 2035", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 47 \n Party Affiliation: Democratic \n Appointed By: John Carney (D)" },
+"DE-4": { field1: "May 22, 2023", field2: "May 22, 2035", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: Unknown \n Party Affiliation: Democratic \n Appointed By: John Carney (D)" },
+
+"FL-0": { field1: "January 22, 2019", field2: "January 4, 2027", notes: " Selection: Missouri Plan \n Age: 57 \n Party Affiliation: Republican \n Appointed By: Ron DeSantis (R)" },
+"FL-1": { field1: "January 14, 2026", field2: "January 1, 2029", notes: " Selection: Missouri Plan \n Age: 54 \n Party Affiliation: Republican \n Appointed By: Ron DeSantis (R)" },
+"FL-2": { field1: "June 1, 2020", field2: "January 1, 2029", notes: " Selection: Missouri Plan \n Age: 48 \n Party Affiliation: Republican \n Appointed By: Ron DeSantis (R)" },
+"FL-3": { field1: "January 6, 2009", field2: "January 1, 2029", notes: " Selection: Missouri Plan \n Age: 74 \n Party Affiliation: Republican \n Appointed By: Charlie Crist (R)" },
+"FL-4": { field1: "September 1, 2022", field2: "January 6, 2031", notes: " Selection: Missouri Plan \n Age: 49 \n Party Affiliation: Republican \n Appointed By: Ron DeSantis (R)" },
+"FL-5": { field1: "September 14, 2020", field2: "January 1, 2029", notes: " Selection: Missouri Plan \n Age: 48 \n Party Affiliation: Republican \n Appointed By: Ron DeSantis (R)" },
+"FL-6": { field1: "May 25, 2023", field2: "January 6, 2031", notes: " Selection: Missouri Plan \n Age: 43 \n Party Affiliation: Republican \n Appointed By: Ron DeSantis (R)" },
+
+"GA-0": { field1: "January 1, 2017", field2: "December 31, 2030", notes: " Selection: Non-partisan Election \n Age: 48 \n Party Affiliation: Republican \n Appointed By: Nathan Deal (R)" },
+"GA-1": { field1: "September 17, 2018", field2: "December 31, 2026", notes: " Selection: Non-partisan Election \n Age: 44 \n Party Affiliation: Republican \n Appointed By: Nathan Deal (R)" },
+"GA-2": { field1: "October 2, 2018", field2: "December 31, 2026", notes: " Selection: Non-partisan Election \n Age: 50 \n Party Affiliation: Republican \n Appointed By: Nathan Deal (R)" },
+"GA-3": { field1: "December 19, 2018", field2: "December 31, 2030", notes: " Selection: Non-partisan Election \n Age: 66 \n Party Affiliation: Independent/Indeterminate \n Appointed By: " },
+"GA-4": { field1: "April 10, 2020", field2: "December 31, 2028", notes: " Selection: Non-partisan Election \n Age: 53 \n Party Affiliation: Republican \n Appointed By: Brian Kemp (R)" },
+"GA-5": { field1: "January 7, 2021", field2: "December 31, 2028", notes: " Selection: Non-partisan Election \n Age: 64 \n Party Affiliation: Republican \n Appointed By: Brian Kemp (R)" },
+"GA-6": { field1: "July 29, 2021", field2: "December 31, 2028", notes: " Selection: Non-partisan Election \n Age: 61 \n Party Affiliation: Republican \n Appointed By: Brian Kemp (R)" },
+"GA-7": { field1: "July 20, 2022", field2: "December 31, 2030", notes: " Selection: Non-partisan Election \n Age: 40 \n Party Affiliation: Republican \n Appointed By: Brian Kemp (R)" },
+"GA-8": { field1: "July 24, 2025", field2: "December 31, 2026", notes: " Selection: Non-partisan Election \n Age: Unknown \n Party Affiliation: Republican \n Appointed By: Brian Kemp (R)" },
+
+"HI-0": { field1: "March 3, 2011", field2: "October 7, 2027", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 69 \n Party Affiliation: Democratic \n Appointed By: Neil Abercrombie (D)" },
+"HI-1": { field1: "December 11, 2020", field2: "December 11, 2030", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 62 \n Party Affiliation: Democratic \n Appointed By: David Ige (D)" },
+"HI-2": { field1: "January 12, 2024", field2: "January 12, 2034", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 62 \n Party Affiliation: Democratic \n Appointed By: Josh Green (D)" },
+"HI-3": { field1: "January 12, 2024", field2: "July 24, 1905", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 64 \n Party Affiliation: Democratic \n Appointed By: Josh Green (D)" },
+"HI-4": { field1: "", field2: "", notes: " Selection: Appointment by Governor with Approval by Senate \n Age:  \n Party Affiliation:  \n Appointed By: " },
+
+"ID-0": { field1: "September 27, 2017", field2: "January 5, 2031", notes: " Selection: Non-partisan Election \n Age: 67 \n Party Affiliation: Republican \n Appointed By: Butch Otter (R)" },
+"ID-1": { field1: "January 2, 2017", field2: "December 31, 2028", notes: " Selection: Non-partisan Election \n Age: 56 \n Party Affiliation: Independent/Indeterminate \n Appointed By: " },
+"ID-2": { field1: "January 3, 2019", field2: "January 3, 2027", notes: " Selection: Non-partisan Election \n Age: 63 \n Party Affiliation: Republican \n Appointed By: Butch Otter (R)" },
+"ID-3": { field1: "July 1, 2021", field2: "December 31, 2028", notes: " Selection: Non-partisan Election \n Age: 53 \n Party Affiliation: Republican \n Appointed By: Brad Little (R)" },
+"ID-4": { field1: "January 5, 2024", field2: "January 3, 2027", notes: " Selection: Non-partisan Election \n Age: Unknown \n Party Affiliation: Republican \n Appointed By: Brad Little (R)" },
+
+"IL-0": { field1: "June 15, 2018", field2: "December 1, 2030", notes: " Selection: Partisan Election \n Age: 77 \n Party Affiliation: Democratic \n Appointed By: Supreme Court (D)" },
+"IL-1": { field1: "January 30, 2026", field2: "December 3, 2028", notes: " Selection: Partisan Election \n Age: 62 \n Party Affiliation: Democratic \n Appointed By: Supreme Court (D)" },
+"IL-2": { field1: "December 1, 2022", field2: "December 3, 2034", notes: " Selection: Partisan Election \n Age: 75 \n Party Affiliation: Democratic \n Appointed By: Supreme Court (D)" },
+"IL-3": { field1: "December 5, 2022", field2: "December 5, 2032", notes: " Selection: Partisan Election \n Age: 65 \n Party Affiliation: Democratic \n Appointed By: " },
+"IL-4": { field1: "December 5, 2022", field2: "December 5, 2032", notes: " Selection: Partisan Election \n Age: 61 \n Party Affiliation: Democratic \n Appointed By: " },
+"IL-5": { field1: "July 8, 2022", field2: "December 3, 2034", notes: " Selection: Partisan Election \n Age: 58 \n Party Affiliation: Republican \n Appointed By: Supreme Court (D)" },
+"IL-6": { field1: "December 7, 2020", field2: "December 1, 2030", notes: " Selection: Partisan Election \n Age: 60 \n Party Affiliation: Republican \n Appointed By: " },
+
+"IN-0": { field1: "November 7, 2012", field2: "May 11, 2033", notes: " Selection: Missouri Plan \n Age: 68 \n Party Affiliation: Republican \n Appointed By: Mitch Daniels (R)" },
+"IN-1": { field1: "April 2, 2012", field2: "December 31, 2034", notes: " Selection: Missouri Plan \n Age: 65 \n Party Affiliation: Republican \n Appointed By: Mitch Daniels (R)" },
+"IN-2": { field1: "June 13, 2016", field2: "December 31, 2028", notes: " Selection: Missouri Plan \n Age: 64 \n Party Affiliation: Republican \n Appointed By: Mike Pence (R)" },
+"IN-3": { field1: "July 24, 2017", field2: "December 31, 2030", notes: " Selection: Missouri Plan \n Age: 54 \n Party Affiliation: Republican \n Appointed By: Eric Holcomb (R)" },
+"IN-4": { field1: "September 1, 2022", field2: "December 31, 2034", notes: " Selection: Missouri Plan \n Age: 44 \n Party Affiliation: Republican \n Appointed By: Eric Holcomb (R)" },
+
+"IA-0": { field1: "September 21, 2018", field2: "December 31, 2028", notes: " Selection: Missouri Plan \n Age: 64 \n Party Affiliation: Republican \n Appointed By: Kim Reynolds (R)" },
+"IA-1": { field1: "February 23, 2011", field2: "December 31, 2028", notes: " Selection: Missouri Plan \n Age: 69 \n Party Affiliation: Republican \n Appointed By: Terry Branstad (R)" },
+"IA-2": { field1: "February 23, 2011", field2: "December 31, 2028", notes: " Selection: Missouri Plan \n Age: 67 \n Party Affiliation: Republican \n Appointed By: Terry Branstad (R)" },
+"IA-3": { field1: "February 20, 2019", field2: "December 31, 2028", notes: " Selection: Missouri Plan \n Age: 52 \n Party Affiliation: Republican \n Appointed By: Kim Reynolds (R)" },
+"IA-4": { field1: "January 29, 2020", field2: "December 31, 2030", notes: " Selection: Missouri Plan \n Age: 59 \n Party Affiliation: Republican \n Appointed By: Kim Reynolds (R)" },
+"IA-5": { field1: "April 3, 2020", field2: "December 31, 2030", notes: " Selection: Missouri Plan \n Age: 49 \n Party Affiliation: Republican \n Appointed By: Kim Reynolds (R)" },
+"IA-6": { field1: "July 27, 2022", field2: "December 31, 2032", notes: " Selection: Missouri Plan \n Age: 55 \n Party Affiliation: Republican \n Appointed By: Kim Reynolds (R)" },
+
+"KS-0": { field1: "November 18, 2005", field2: "January 10, 2027", notes: " Selection: Missouri Plan \n Age: 73 \n Party Affiliation: Democratic \n Appointed By: Kathleen Sebelius (D)" },
+"KS-1": { field1: "December 14, 2020", field2: "January 7, 2029", notes: " Selection: Missouri Plan \n Age: 64 \n Party Affiliation: Democratic \n Appointed By: Laura Kelly (D)" },
+"KS-2": { field1: "March 6, 2009", field2: "January 7, 2029", notes: " Selection: Missouri Plan \n Age: 74 \n Party Affiliation: Democratic \n Appointed By: Kathleen Sebelius (D)" },
+"KS-3": { field1: "August 3, 2020", field2: "January 7, 2029", notes: " Selection: Missouri Plan \n Age: 56 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Laura Kelly (D)" },
+"KS-4": { field1: "", field2: "", notes: " Selection: Missouri Plan \n Age:  \n Party Affiliation:  \n Appointed By: Laura Kelly (D)" },
+"KS-5": { field1: "September 17, 2025", field2: "January 10, 2027", notes: " Selection: Missouri Plan \n Age: 47 \n Party Affiliation: Republican \n Appointed By: Laura Kelly (D)" },
+"KS-6": { field1: "December 5, 2014", field2: "January 7, 2029", notes: " Selection: Missouri Plan \n Age: 55 \n Party Affiliation: Republican \n Appointed By: Sam Brownback (R)" },
+
+"KY-0": { field1: "January 7, 2019", field2: "January 3, 2027", notes: " Selection: Non-partisan Election \n Age: Unknown \n Party Affiliation: Republican \n Appointed By: " },
+"KY-1": { field1: "January 4, 2021", field2: "December 31, 2028", notes: " Selection: Non-partisan Election \n Age: 68 \n Party Affiliation: Republican \n Appointed By: " },
+"KY-2": { field1: "December 11, 2019", field2: "January 5, 2031", notes: " Selection: Non-partisan Election \n Age: 67 \n Party Affiliation: Democratic \n Appointed By: " },
+"KY-3": { field1: "January 2, 2023", field2: "January 5, 2031", notes: " Selection: Non-partisan Election \n Age: 78 \n Party Affiliation: Republican \n Appointed By: " },
+"KY-4": { field1: "January 2, 2023", field2: "January 5, 2031", notes: " Selection: Non-partisan Election \n Age: 61 \n Party Affiliation: Independent/Indeterminate \n Appointed By: " },
+"KY-5": { field1: "January 6, 2025", field2: "January 2, 2033", notes: " Selection: Non-partisan Election \n Age: 66 \n Party Affiliation: Democratic \n Appointed By: " },
+"KY-6": { field1: "April 3, 2013", field2: "January 5, 2031", notes: " Selection: Non-partisan Election \n Age: 66 \n Party Affiliation: Democratic \n Appointed By: Steve Beshear (D)" },
+
+"LA-0": { field1: "December 13, 2001", field2: "December 31, 2032", notes: " Selection: Partisan Election \n Age: 72 \n Party Affiliation: Independent/Indeterminate \n Appointed By: " },
+"LA-1": { field1: "December 22, 2025", field2: "December 31, 2026", notes: " Selection: Partisan Election \n Age: Unknown \n Party Affiliation: Republican \n Appointed By: Supreme Court (R)" },
+"LA-2": { field1: "January 1, 2025", field2: "December 31, 2034", notes: " Selection: Partisan Election \n Age: 64 \n Party Affiliation: Democratic \n Appointed By: " },
+"LA-3": { field1: "April 3, 2025", field2: "December 31, 2026", notes: " Selection: Partisan Election \n Age: 43 \n Party Affiliation: Republican \n Appointed By: " },
+"LA-4": { field1: "November 13, 2020", field2: "December 31, 2026", notes: " Selection: Partisan Election \n Age: 66 \n Party Affiliation: Republican \n Appointed By: " },
+"LA-5": { field1: "February 1, 2013", field2: "December 31, 2028", notes: " Selection: Partisan Election \n Age: 74 \n Party Affiliation: Republican \n Appointed By: " },
+"LA-6": { field1: "January 1, 2021", field2: "December 31, 2030", notes: " Selection: Partisan Election \n Age: 64 \n Party Affiliation: Democratic \n Appointed By: " },
+
+"ME-0": { field1: "June 8, 2021", field2: "June 8, 2028", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 68 \n Party Affiliation: Democratic \n Appointed By: Janet Mills (D)" },
+"ME-1": { field1: "March 22, 2007", field2: "March 22, 2028", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 74 \n Party Affiliation: Democratic \n Appointed By: John Baldacci (D)" },
+"ME-2": { field1: "February 4, 2020", field2: "February 4, 2027", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 67 \n Party Affiliation: Democratic \n Appointed By: Janet Mills (D)" },
+"ME-3": { field1: "May 4, 2022", field2: "May 4, 2029", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 71 \n Party Affiliation: Democratic \n Appointed By: Janet Mills (D)" },
+"ME-4": { field1: "March 10, 2023", field2: "March 10, 2030", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 74 \n Party Affiliation: Democratic \n Appointed By: Janet Mills (D)" },
+"ME-5": { field1: "March 28, 2025", field2: "March 28, 2032", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 46 \n Party Affiliation: Democratic \n Appointed By: Janet Mills (D)" },
+"ME-6": { field1: "", field2: "", notes: " Selection: Appointment by Governor with Approval by Senate \n Age:  \n Party Affiliation:  \n Appointed By: " },
+
+
+
+
+"MD-0": { field1: "April 15, 2022", field2: "December 31, 2034", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 53 \n Party Affiliation: Democratic \n Appointed By: Larry Hogan (R)" },
+"MD-1": { field1: "April 18, 2019", field2: "December 31, 2030", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 54 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Larry Hogan (R)" },
+"MD-2": { field1: "April 12, 2022", field2: "December 31, 2034", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 67 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Larry Hogan (R)" },
+"MD-3": { field1: "July 31, 2024", field2: "December 31, 2026", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 66 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Wes Moore (D)" },
+"MD-4": { field1: "December 16, 2019", field2: "December 31, 2030", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 60 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Larry Hogan (R)" },
+"MD-5": { field1: "July 31, 2013", field2: "December 31, 2034", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 67 \n Party Affiliation: Democratic \n Appointed By: Martin O'Malley (D)" },
+"MD-6": { field1: "September 11, 2021", field2: "December 31, 2032", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 60 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Larry Hogan (R)" },
+
+"MA-0": { field1: "August 24, 2016", field2: "October 23, 2036", notes: " Appointment by Governor with Approval by Governor's Council \n Age: 60 \n Party Affiliation: Democratic \n Appointed By: Charlie Baker (R)" },
+"MA-1": { field1: "August 18, 2016", field2: "September 8, 2033", notes: " Appointment by Governor with Approval by Governor's Council \n Age: 63 \n Party Affiliation: Democratic \n Appointed By: Charlie Baker (R)" },
+"MA-2": { field1: "August 21, 2017", field2: "April 24, 2029", notes: " Appointment by Governor with Approval by Governor's Council \n Age: 67 \n Party Affiliation: Republican \n Appointed By: Charlie Baker (R)" },
+"MA-3": { field1: "December 4, 2020", field2: "October 1, 2039", notes: " Appointment by Governor with Approval by Governor's Council \n Age: 57 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Charlie Baker (R)" },
+"MA-4": { field1: "December 16, 2020", field2: "April 10, 2040", notes: " Appointment by Governor with Approval by Governor's Council \n Age: 56 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Charlie Baker (R)" },
+"MA-5": { field1: "January 16, 2024", field2: "July 4, 2050", notes: " Appointment by Governor with Approval by Governor's Council \n Age: 46 \n Party Affiliation: Democratic \n Appointed By: Maura Healey (D)" },
+"MA-6": { field1: "April 22, 2024", field2: "December 16, 2030", notes: " Appointment by Governor with Approval by Governor's Council \n Age: 66 \n Party Affiliation: Democratic \n Appointed By: Maura Healey (D)" },
+
+"MI-0": { field1: "January 1, 2019", field2: "January 1, 2027", notes: " Semipartisan Election \n Age: 55 \n Party Affiliation: Democratic \n Appointed By: " },
+"MI-1": { field1: "January 14, 2011", field2: "January 1, 2031", notes: " Semipartisan Election \n Age: 66 \n Party Affiliation: Republican \n Appointed By: Rick Snyder (R)" },
+"MI-2": { field1: "January 1, 2015", field2: "January 1, 2031", notes: " Semipartisan Election \n Age: 52 \n Party Affiliation: Democratic \n Appointed By: " },
+"MI-3": { field1: "January 1, 2021", field2: "January 1, 2029", notes: " Semipartisan Election \n Age: 56 \n Party Affiliation: Democratic \n Appointed By: " },
+"MI-4": { field1: "January 1, 2023", field2: "January 1, 2033", notes: " Semipartisan Election \n Age: 38 \n Party Affiliation: Democratic \n Appointed By: Gretchen Whitmer (D)" },
+"MI-5": { field1: "January 1, 2025", field2: "January 1, 2033", notes: " Semipartisan Election \n Age: 54 \n Party Affiliation: Democratic \n Appointed By: " },
+"MI-6": { field1: "May 27, 2025", field2: "January 1, 2027", notes: " Semipartisan Election \n Age: 40 \n Party Affiliation: Democratic \n Appointed By: Gretchen Whitmer (D)" },
+
+"MN-0": { field1: "October 26, 2015", field2: "January 31, 2027", notes: " Selection: Non-partisan Election \n Age: 69 \n Party Affiliation: Democratic \n Appointed By: Tim Walz (DFL)" },
+"MN-1": { field1: "May 13, 2024", field2: "January 3, 2027", notes: " Selection: Non-partisan Election \n Age: 56 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Tim Walz (DFL)" },
+"MN-2": { field1: "August 1, 2024", field2: "January 3, 2027", notes: " Selection: Non-partisan Election \n Age: 55 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Tim Walz (DFL)" },
+"MN-3": { field1: "August 3, 2020", field2: "December 31, 2028", notes: " Selection: Non-partisan Election \n Age: 63 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Tim Walz (DFL)" },
+"MN-4": { field1: "May 14, 2018", field2: "January 3, 2027", notes: " Selection: Non-partisan Election \n Age: 60 \n Party Affiliation: Democratic \n Appointed By: Mark Dayton (DFL)" },
+"MN-5": { field1: "August 31, 2016", field2: "January 5, 2031", notes: " Selection: Non-partisan Election \n Age: 59 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Mark Dayton (DFL)" },
+"MN-6": { field1: "October 2, 2023", field2: "January 5, 2031", notes: " Selection: Non-partisan Election \n Age: 43 \n Party Affiliation: Democratic \n Appointed By: Tim Walz (DFL)" },
+
+"MS-0": { field1: "February 1, 2019", field2: "January 5, 2031", notes: " Selection: Non-partisan Election \n Age: Unknown \n Party Affiliation: Republican \n Appointed By: Phil Bryant (R)" },
+"MS-1": { field1: "February 1, 2011", field2: "December 31, 2028", notes: " Selection: Non-partisan Election \n Age: 77 \n Party Affiliation: Democratic \n Appointed By: Haley Barbour (R)" },
+"MS-2": { field1: "January 6, 2025", field2: "January 2, 2033", notes: " Selection: Non-partisan Election \n Age: 47 \n Party Affiliation: Republican \n Appointed By: " },
+"MS-3": { field1: "September 18, 2017", field2: "December 31, 2028", notes: " Selection: Non-partisan Election \n Age: 63 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Phil Bryant (R)" },
+"MS-4": { field1: "January 6, 2025", field2: "January 2, 2033", notes: " Selection: Non-partisan Election \n Age: Unknown \n Party Affiliation: Republican \n Appointed By: " },
+"MS-5": { field1: "April 23, 2004", field2: "December 31, 2028", notes: " Selection: Non-partisan Election \n Age: 80 \n Party Affiliation: Republican \n Appointed By: Haley Barbour (R)" },
+"MS-6": { field1: "2026 (Special)", field2: "", notes: " Selection: Non-partisan Election \n Age:  \n Party Affiliation:  \n Appointed By: " },
+"MS-7": { field1: "2026 (Special)", field2: "", notes: " Selection: Non-partisan Election \n Age:  \n Party Affiliation:  \n Appointed By: " },
+"MS-8": { field1: "January 7, 2013", field2: "December 31, 2028", notes: " Selection: Non-partisan Election \n Age: 54 \n Party Affiliation: Republican \n Appointed By: " },
+
+"MO-0": { field1: "April 25, 2017", field2: "December 31, 2030", notes: " Selection: Missouri Plan \n Age: 56 \n Party Affiliation: Republican \n Appointed By: Eric Greitens (R)" },
+"MO-1": { field1: "September 20, 2004", field2: "December 31, 2030", notes: " Selection: Missouri Plan \n Age: 68 \n Party Affiliation: Democratic \n Appointed By: Bob Holden (D)" },
+"MO-2": { field1: "October 15, 2008", field2: "December 31, 2034", notes: " Selection: Missouri Plan \n Age: 63 \n Party Affiliation: Republican \n Appointed By: Matt Blunt (R)" },
+"MO-3": { field1: "December 3, 2012", field2: "December 31, 2026", notes: " Selection: Missouri Plan \n Age: 65 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Jay Nixon (D)" },
+"MO-4": { field1: "May 24, 2021", field2: "December 31, 2034", notes: " Selection: Missouri Plan \n Age: 59 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Mike Parson (R)" },
+"MO-5": { field1: "September 25, 2023", field2: "December 31, 2036", notes: " Selection: Missouri Plan \n Age: 55 \n Party Affiliation: Republican \n Appointed By: Mike Parson (R)" },
+"MO-6": { field1: "November 1, 2023", field2: "December 31, 2036", notes: " Selection: Missouri Plan \n Age: 51 \n Party Affiliation: Republican \n Appointed By: Mike Parson (R)" },
+
+"MT-0": { field1: "January 6, 2025", field2: "January 2, 2033", notes: " Selection: Non-partisan Election \n Age: 50 \n Party Affiliation: Republican \n Appointed By: " },
+"MT-1": { field1: "March 11, 2001", field2: "January 5, 2031", notes: " Selection: Non-partisan Election \n Age: 69 \n Party Affiliation: Republican \n Appointed By: Judy Martz (R)" },
+"MT-2": { field1: "January 3, 2011", field2: "January 3, 2027", notes: " Selection: Non-partisan Election \n Age: 65 \n Party Affiliation: Democratic \n Appointed By: " },
+"MT-3": { field1: "January 7, 2013", field2: "December 31, 2028", notes: " Selection: Non-partisan Election \n Age: 66 \n Party Affiliation: Independent/Indeterminate \n Appointed By: " },
+"MT-4": { field1: "June 2, 2014", field2: "December 31, 2028", notes: " Selection: Non-partisan Election \n Age: 60 \n Party Affiliation: Democratic \n Appointed By: Steve Bullock (D)" },
+"MT-5": { field1: "January 1, 2018", field2: "January 5, 2031", notes: " Selection: Non-partisan Election \n Age: 65 \n Party Affiliation: Democratic \n Appointed By: Steve Bullock (D)" },
+"MT-6": { field1: "January 2, 2025", field2: "January 2, 2033", notes: " Selection: Non-partisan Election \n Age: 66 \n Party Affiliation: Democratic \n Appointed By: " },
+
+"NE-0": { field1: "June 27, 2016", field2: "November 7, 2028", notes: " Selection: Missouri Plan \n Age: 57 \n Party Affiliation: Republican \n Appointed By: Jim Pillen (R)" },
+"NE-1": { field1: "September 28, 2015", field2: "January 9, 2031", notes: " Selection: Missouri Plan \n Age: 64 \n Party Affiliation: Republican \n Appointed By: Pete Ricketts (R)" },
+"NE-2": { field1: "November 10, 2025", field2: "January 9, 2031", notes: " Selection: Missouri Plan \n Age: Unknown \n Party Affiliation: Independent/Indeterminate \n Appointed By: Jim Pillen (R)" },
+"NE-3": { field1: "April 26, 2012", field2: "January 4, 2029", notes: " Selection: Missouri Plan \n Age: 71 \n Party Affiliation: Republican \n Appointed By: Dave Heineman (R)" },
+"NE-4": { field1: "May 7, 2018", field2: "January 4, 2029", notes: " Selection: Missouri Plan \n Age: 44 \n Party Affiliation: Republican \n Appointed By: Pete Ricketts (R)" },
+"NE-5": { field1: "January 2, 2025", field2: "January 4, 2029", notes: " Selection: Missouri Plan \n Age: 52 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Jim Pillen (R)" },
+"NE-6": { field1: "July 6, 2018", field2: "January 4, 2029", notes: " Selection: Missouri Plan \n Age: 57 \n Party Affiliation: Republican \n Appointed By: Pete Ricketts (R)" },
+
+"NV-0": { field1: "January 4, 2021", field2: "January 3, 2027", notes: " Selection: Non-partisan Election \n Age: 62 \n Party Affiliation: Republican \n Appointed By: " },
+"NV-1": { field1: "January 2, 2023", field2: "December 31, 2028", notes: " Selection: Non-partisan Election \n Age: 59 \n Party Affiliation: Independent/Indeterminate \n Appointed By: " },
+"NV-2": { field1: "January 5, 2009", field2: "January 3, 2027", notes: " Selection: Non-partisan Election \n Age: 74 \n Party Affiliation: Republican \n Appointed By: " },
+"NV-3": { field1: "January 7, 2019", field2: "January 5, 2031", notes: " Selection: Non-partisan Election \n Age: 62 \n Party Affiliation: Democratic \n Appointed By: " },
+"NV-4": { field1: "January 3, 2005", field2: "December 31, 2028", notes: " Selection: Non-partisan Election \n Age: 67 \n Party Affiliation: Republican \n Appointed By: " },
+"NV-5": { field1: "November 21, 2022", field2: "January 5, 2031", notes: " Selection: Non-partisan Election \n Age: 51 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Steve Sisolak (D)" },
+"NV-6": { field1: "December 5, 2016", field2: "January 5, 2031", notes: " Selection: Non-partisan Election \n Age: 57 \n Party Affiliation: Democratic \n Appointed By: Brian Sandoval (R)" },
+
+"NH-0": { field1: "March 4, 2021", field2: "November 27, 2031", notes: " Selection: Appointment by Governor with Approval by Executive Council \n Age: 65 \n Party Affiliation: Republican \n Appointed By: Chris Sununu (R)" },
+"NH-1": { field1: "May 8, 2018", field2: "May 8, 2034", notes: " Selection: Appointment by Governor with Approval by Executive Council \n Age: 62 \n Party Affiliation: Republican \n Appointed By: Chris Sununu (R)" },
+"NH-2": { field1: "January 2, 2024", field2: "2040/2041", notes: " Selection: Appointment by Governor with Approval by Executive Council \n Age: 55 \n Party Affiliation: Republican \n Appointed By: Chris Sununu (R)" },
+"NH-3": { field1: "September 18, 2025", field2: "2028/2029", notes: " Selection: Appointment by Governor with Approval by Executive Council \n Age: 67 \n Party Affiliation: Republican \n Appointed By: Kelly Ayotte (R)" },
+"NH-4": { field1: "March 4, 2026", field2: "2036/2037", notes: " Selection: Appointment by Governor with Approval by Executive Council \n Age: 59 \n Party Affiliation: Republican \n Appointed By: Kelly Ayotte (R)" },
+
+"NJ-0": { field1: "June 29, 2007", field2: "June 30, 2030", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 66 \n Party Affiliation: Democratic \n Appointed By: Jon Corzine (D)" },
+"NJ-1": { field1: "September 1, 2011", field2: "April 15, 2029", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 67 \n Party Affiliation: Republican \n Appointed By: Chris Christie (R)" },
+"NJ-2": { field1: "September 1, 2020", field2: "September 1, 2027", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 46 \n Party Affiliation: Democratic \n Appointed By: Phil Murphy (D)" },
+"NJ-3": { field1: "October 21, 2022", field2: "October 21, 2029", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 46 \n Party Affiliation: Democratic \n Appointed By: Phil Murphy (D)" },
+"NJ-4": { field1: "October 21, 2022", field2: "October 21, 2029", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 66 \n Party Affiliation: Republican \n Appointed By: Phil Murphy (D)" },
+"NJ-5": { field1: "July 6, 2023", field2: "July 6, 2030", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 48 \n Party Affiliation: Democratic \n Appointed By: Phil Murphy (D)" },
+"NJ-6": { field1: "October 2, 2024", field2: "October 2, 2031", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 61 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Phil Murphy (D)" },
+
+"NM-0": { field1: "January 25, 2021", field2: "December 31, 2028", notes: " Selection: Appointment by governor \n Age: 57 \n Party Affiliation: Democratic \n Appointed By: Michelle Lujan Grisham (D)" },
+"NM-1": { field1: "December 31, 2018", field2: "December 31, 2030", notes: " Selection: Appointment by governor \n Age: 75 \n Party Affiliation: Democratic \n Appointed By: " },
+"NM-2": { field1: "February 4, 2019", field2: "December 31, 2026", notes: " Selection: Appointment by governor \n Age: 55 \n Party Affiliation: Democratic \n Appointed By: Michelle Lujan Grisham (D)" },
+"NM-3": { field1: "February 4, 2019", field2: "December 31, 2026", notes: " Selection: Appointment by governor \n Age: 57 \n Party Affiliation: Democratic \n Appointed By: Michelle Lujan Grisham (D)" },
+"NM-4": { field1: "August 9, 2021", field2: "December 31, 2032", notes: " Selection: Appointment by governor \n Age: 52 \n Party Affiliation: Democratic \n Appointed By: Michelle Lujan Grisham (D)" },
+
+"NY-0": { field1: "February 6, 2017", field2: "December 31, 2030", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 66 \n Party Affiliation: Democratic \n Appointed By: Kathy Hochul (D)" },
+"NY-1": { field1: "February 11, 2013", field2: "February 11, 2027", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 66 \n Party Affiliation: Democratic \n Appointed By: Andrew Cuomo (D)" },
+"NY-2": { field1: "February 8, 2016", field2: "February 8, 2030", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 65 \n Party Affiliation: Republican \n Appointed By: Andrew Cuomo (D)" },
+"NY-3": { field1: "June 8, 2021", field2: "June 8, 2035", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 60 \n Party Affiliation: Democratic \n Appointed By: Andrew Cuomo (D)" },
+"NY-4": { field1: "June 8, 2021", field2: "June 8, 2035", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 61 \n Party Affiliation: Democratic \n Appointed By: Andrew Cuomo (D)" },
+"NY-5": { field1: "January 12, 2022", field2: "December 31, 2029", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 67 \n Party Affiliation: Democratic \n Appointed By: Kathy Hochul (D)" },
+"NY-6": { field1: "April 19, 2023", field2: "December 31, 2036", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 60 \n Party Affiliation: Democratic \n Appointed By: Kathy Hochul (D)" },
+
+"NC-0": { field1: "November 29, 2004", field2: "December 31, 2028", notes: " Selection: Partisan Election \n Age: 71 \n Party Affiliation: Republican \n Appointed By: " },
+"NC-1": { field1: "January 1, 2019", field2: "December 31, 2026", notes: " Selection: Partisan Election \n Age: 66 \n Party Affiliation: Democratic \n Appointed By: " },
+"NC-2": { field1: "January 1, 2021", field2: "December 31, 2028", notes: " Selection: Partisan Election \n Age: 54 \n Party Affiliation: Republican \n Appointed By: " },
+"NC-3": { field1: "January 1, 2023", field2: "December 31, 2030", notes: " Selection: Partisan Election \n Age: 49 \n Party Affiliation: Republican \n Appointed By: " },
+"NC-4": { field1: "January 1, 2021", field2: "December 31, 2028", notes: " Selection: Partisan Election \n Age: 68 \n Party Affiliation: Republican \n Appointed By: " },
+"NC-5": { field1: "January 1, 2023", field2: "December 31, 2030", notes: " Selection: Partisan Election \n Age: 52 \n Party Affiliation: Republican \n Appointed By: " },
+"NC-6": { field1: "September 13, 2023", field2: "December 31, 2032", notes: " Selection: Partisan Election \n Age: 45 \n Party Affiliation: Democratic \n Appointed By: Roy Cooper (D)" },
+
+"ND-0": { field1: "January 1, 2014", field2: "December 31, 2028", notes: " Selection: Non-partisan Election \n Age: 64 \n Party Affiliation: Republican \n Appointed By: Jack Dalrymple (R)" },
+"ND-1": { field1: "January 1, 2017", field2: "December 31, 2026", notes: " Selection: Non-partisan Election \n Age: 51 \n Party Affiliation: Republican \n Appointed By: " },
+"ND-2": { field1: "August 15, 2017", field2: "December 31, 2030", notes: " Selection: Non-partisan Election \n Age: 61 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Doug Burgum (R)" },
+"ND-3": { field1: "February 1, 2023", field2: "December 31, 2026", notes: " Selection: Non-partisan Election \n Age: 65 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Doug Burgum (R)" },
+"ND-4": { field1: "March 9, 2026", field2: "December 31, 2028", notes: " Selection: Non-partisan Election \n Age: 57 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Kelly Armstrong (R)" },
+
+"OH-0": { field1: "December 7, 2012", field2: "December 31, 2028", notes: " Selection: Partisan Election \n Age: 64 \n Party Affiliation: Republican \n Appointed By: " },
+"OH-1": { field1: "January 1, 2017", field2: "December 31, 2028", notes: " Selection: Partisan Election \n Age: 69 \n Party Affiliation: Republican \n Appointed By: " },
+"OH-2": { field1: "January 2, 2017", field2: "January 1, 2029", notes: " Selection: Partisan Election \n Age: 58 \n Party Affiliation: Republican \n Appointed By: " },
+"OH-3": { field1: "January 2, 2021", field2: "January 1, 2027", notes: " Selection: Partisan Election \n Age: 69 \n Party Affiliation: Democratic \n Appointed By: " },
+"OH-4": { field1: "January 7, 2023", field2: "January 1, 2031", notes: " Selection: Partisan Election \n Age: 69 \n Party Affiliation: Republican \n Appointed By: Mike DeWine (R)" },
+"OH-5": { field1: "December 10, 2024", field2: "December 31, 2026", notes: " Selection: Partisan Election \n Age: 51 \n Party Affiliation: Republican \n Appointed By: " },
+"OH-6": { field1: "January 1, 2025", field2: "December 31, 2030", notes: " Selection: Partisan Election \n Age: 54 \n Party Affiliation: Republican \n Appointed By: " },
+
+"OK-0": { field1: "November 20, 2019", field2: "January 7, 2029", notes: " Selection: Missouri Plan \n Age: 51 \n Party Affiliation: Republican \n Appointed By: Kevin Stitt (R)" },
+"OK-1": { field1: "July 26, 2021", field2: "January 10, 2027", notes: " Selection: Missouri Plan \n Age: 55 \n Party Affiliation: Republican \n Appointed By: Kevin Stitt (R)" },
+"OK-2": { field1: "September 17, 2019", field2: "January 10, 2027", notes: " Selection: Missouri Plan \n Age: 64 \n Party Affiliation: Republican \n Appointed By: Kevin Stitt (R)" },
+"OK-3": { field1: "January 7, 2011", field2: "January 13, 2030", notes: " Selection: Missouri Plan \n Age: 74 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Brad Henry (D)" },
+"OK-4": { field1: "April 14, 2025", field2: "January 10, 2027", notes: " Selection: Missouri Plan \n Age: 42 \n Party Affiliation: Republican \n Appointed By: Kevin Stitt (R)" },
+"OK-5": { field1: "January 4, 2000", field2: "January 7, 2029", notes: " Selection: Missouri Plan \n Age: 74 \n Party Affiliation: Republican \n Appointed By: Frank Keating (R)" },
+"OK-6": { field1: "December 3, 2003", field2: "January 13, 2030", notes: " Selection: Missouri Plan \n Age: 81 \n Party Affiliation: Democratic \n Appointed By: Brad Henry (D)" },
+"OK-7": { field1: "November 5, 2010", field2: "January 7, 2029", notes: " Selection: Missouri Plan \n Age: 75 \n Party Affiliation: Democratic \n Appointed By: Brad Henry (D)" },
+"OK-8": { field1: "April 5, 2018", field2: "January 10, 2027", notes: " Selection: Missouri Plan \n Age: 68 \n Party Affiliation: Republican \n Appointed By: Mary Fallin (R)" },
+
+"OR-0": { field1: "April 1, 2017", field2: "January 5, 2031", notes: " Selection: Non-partisan Election \n Age: 59 \n Party Affiliation: Democratic \n Appointed By: Kate Brown (D)" },
+"OR-1": { field1: "July 1, 2017", field2: "January 5, 2031", notes: " Selection: Non-partisan Election \n Age: 55 \n Party Affiliation: Democratic \n Appointed By: Kate Brown (D)" },
+"OR-2": { field1: "January 1, 2019", field2: "January 3, 2027", notes: " Selection: Non-partisan Election \n Age: 53 \n Party Affiliation: Democratic \n Appointed By: Kate Brown (D)" },
+"OR-3": { field1: "January 19, 2022", field2: "December 31, 2028", notes: " Selection: Non-partisan Election \n Age: 61 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Kate Brown (D)" },
+"OR-4": { field1: "January 1, 2023", field2: "January 5, 2031", notes: " Selection: Non-partisan Election \n Age: 68 \n Party Affiliation: Democratic \n Appointed By: Kate Brown (D)" },
+"OR-5": { field1: "January 1, 2023", field2: "January 5, 2031", notes: " Selection: Non-partisan Election \n Age: 54 \n Party Affiliation: Democratic \n Appointed By: Kate Brown (D)" },
+"OR-6": { field1: "September 1, 2023", field2: "January 5, 2031", notes: " Selection: Non-partisan Election \n Age: 55 \n Party Affiliation: Democratic \n Appointed By: Tina Kotek (D)" },
+
+"PA-0": { field1: "January 7, 2008", field2: "January 2, 2028", notes: " Selection: Partisan Election \n Age: 69 \n Party Affiliation: Democratic \n Appointed By: " },
+"PA-1": { field1: "January 4, 2016", field2: "December 31, 2027", notes: " Selection: Partisan Election \n Age: 74 \n Party Affiliation: Democratic \n Appointed By: " },
+"PA-2": { field1: "January 4, 2016", field2: "December 31, 2035", notes: " Selection: Partisan Election \n Age: 64 \n Party Affiliation: Democratic \n Appointed By: " },
+"PA-3": { field1: "January 4, 2016", field2: "December 31, 2035", notes: " Selection: Partisan Election \n Age: 64 \n Party Affiliation: Democratic \n Appointed By: " },
+"PA-4": { field1: "July 21, 2016", field2: "January 2, 2028", notes: " Selection: Partisan Election \n Age: 64 \n Party Affiliation: Republican \n Appointed By: Tom Wolf (D)" },
+"PA-5": { field1: "January 3, 2022", field2: "January 4, 2032", notes: " Selection: Partisan Election \n Age: 56 \n Party Affiliation: Republican \n Appointed By: " },
+"PA-6": { field1: "January 1, 2024", field2: "January 1, 2034", notes: " Selection: Partisan Election \n Age: 62 \n Party Affiliation: Democratic \n Appointed By: " },
+
+"RI-0": { field1: "July 9, 2003", field2: "-", notes: " Selection: Appointment by Governor with Approval by General Assembly \n Age: 77 \n Party Affiliation: Republican \n Appointed By: Donald Carcieri (R)" },
+"RI-1": { field1: "September 7, 2004", field2: "-", notes: " Selection: Appointment by Governor with Approval by General Assembly \n Age: 86 \n Party Affiliation: Republican \n Appointed By: Donald Carcieri (R)" },
+"RI-2": { field1: "January 4, 2021", field2: "-", notes: " Selection: Appointment by Governor with Approval by General Assembly \n Age: 51 \n Party Affiliation: Democratic \n Appointed By: Gina Raimondo (D)" },
+"RI-3": { field1: "January 11, 2021", field2: "-", notes: " Selection: Appointment by Governor with Approval by General Assembly \n Age: 55 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Gina Raimondo (D)" },
+"RI-4": { field1: "", field2: "", notes: " Selection: Appointment by Governor with Approval by General Assembly \n Age:  \n Party Affiliation:  \n Appointed By: " },
+
+"SC-0": { field1: "August 1, 2008", field2: "July 31, 2028", notes: " Selection: Appointment by General Assembly \n Age: 70 \n Party Affiliation: Republican \n Appointed By: General Assembly (R)" },
+"SC-1": { field1: "January 1, 2016", field2: "July 31, 2026", notes: " Selection: Appointment by General Assembly \n Age: 63 \n Party Affiliation: Republican \n Appointed By: General Assembly (R)" },
+"SC-2": { field1: "February 7, 2017", field2: "July 31, 2030", notes: " Selection: Appointment by General Assembly \n Age: 66 \n Party Affiliation: Republican \n Appointed By: General Assembly (R)" },
+"SC-3": { field1: "February 9, 2023", field2: "July 31, 2033", notes: " Selection: Appointment by General Assembly \n Age: 62 \n Party Affiliation: Independent/Indeterminate \n Appointed By: General Assembly (R)" },
+"SC-4": { field1: "August 1, 2024", field2: "July 31, 2034", notes: " Selection: Appointment by General Assembly \n Age: 56 \n Party Affiliation: Independent/Indeterminate \n Appointed By: General Assembly (R)" },
+
+"SD-0": { field1: "November 3, 2017", field2: "January 1, 2029", notes: " Selection: Missouri Plan \n Age: 63 \n Party Affiliation: Republican \n Appointed By: Dennis Daugaard (R)" },
+"SD-1": { field1: "December 8, 2025", field2: "January 4, 2027", notes: " Selection: Missouri Plan \n Age: Unknown \n Party Affiliation: Independent/Indeterminate \n Appointed By: Larry Rhoden (R)" },
+"SD-2": { field1: "July 9, 2018", field2: "January 6, 2031", notes: " Selection: Missouri Plan \n Age: 58 \n Party Affiliation: Republican \n Appointed By: Dennis Daugaard (R)" },
+"SD-3": { field1: "April 4, 2019", field2: "January 6, 2031", notes: " Selection: Missouri Plan \n Age: 58 \n Party Affiliation: Republican \n Appointed By: Kristi Noem (R)" },
+"SD-4": { field1: "January 5, 2021", field2: "January 3, 2033", notes: " Selection: Missouri Plan \n Age: 62 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Kristi Noem (R)" },
+
+"TN-0": { field1: "July 16, 2014", field2: "August 31, 2030", notes: " Selection: Appointment by Governor with Approval by General Assembly \n Age: 66 \n Party Affiliation: Republican \n Appointed By: Bill Haslam (R)" },
+"TN-1": { field1: "September 1, 2014", field2: "August 31, 2030", notes: " Selection: Appointment by Governor with Approval by General Assembly \n Age: 69 \n Party Affiliation: Republican \n Appointed By: Bill Haslam (R)" },
+"TN-2": { field1: "February 10, 2022", field2: "August 31, 2030", notes: " Selection: Appointment by Governor with Approval by General Assembly \n Age: 44 \n Party Affiliation: Republican \n Appointed By: Bill Lee (R)" },
+"TN-3": { field1: "September 1, 2023", field2: "August 31, 2030", notes: " Selection: Appointment by Governor with Approval by General Assembly \n Age: 71 \n Party Affiliation: Republican \n Appointed By: Bill Lee (R)" },
+"TN-4": { field1: "September 1, 2024", field2: "August 31, 2026", notes: " Selection: Appointment by Governor with Approval by General Assembly \n Age: 42 \n Party Affiliation: Republican \n Appointed By: Bill Lee (R)" },
+
+"TX-0": { field1: "January 2, 2018", field2: "December 31, 2026", notes: " Selection: Partisan Election \n Age: 46 \n Party Affiliation: Republican \n Appointed By: Greg Abbott (R)" },
+"TX-1": { field1: "January 7, 2025", field2: "December 31, 2026", notes: " Selection: Partisan Election \n Age: 45 \n Party Affiliation: Republican \n Appointed By: Greg Abbott (R)" },
+"TX-2": { field1: "June 21, 2010", field2: "December 31, 2028", notes: " Selection: Partisan Election \n Age: 70 \n Party Affiliation: Republican \n Appointed By: Rick Perry (R)" },
+"TX-3": { field1: "January 1, 2013", field2: "December 31, 2030", notes: " Selection: Partisan Election \n Age: 68 \n Party Affiliation: Republican \n Appointed By: " },
+"TX-4": { field1: "October 30, 2020", field2: "December 31, 2028", notes: " Selection: Partisan Election \n Age: 53 \n Party Affiliation: Republican \n Appointed By: Greg Abbott (R)" },
+"TX-5": { field1: "September 4, 2019", field2: "December 31, 2030", notes: " Selection: Partisan Election \n Age: 61 \n Party Affiliation: Republican \n Appointed By: Greg Abbott (R)" },
+"TX-6": { field1: "October 24, 2025", field2: "December 31, 2026", notes: " Selection: Partisan Election \n Age: 46 \n Party Affiliation: Republican \n Appointed By: Greg Abbott (R)" },
+"TX-7": { field1: "February 21, 2019", field2: "December 31, 2026", notes: " Selection: Partisan Election \n Age: 53 \n Party Affiliation: Republican \n Appointed By: Greg Abbott (R)" },
+"TX-8": { field1: "November 10, 2021", field2: "December 31, 2028", notes: " Selection: Partisan Election \n Age: 50 \n Party Affiliation: Republican \n Appointed By: Greg Abbott (R)" },
+
+"UT-0": { field1: "February 8, 2000", field2: "December 31, 2034", notes: " Selection: Missouri Plan \n Age: 69 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Mike Leavitt (R)" },
+"UT-1": { field1: "January 19, 2018", field2: "January 2, 2033", notes: " Selection: Missouri Plan \n Age: 54 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Gary Herbert (R)" },
+"UT-2": { field1: "August 17, 2022", field2: "January 3, 2027", notes: " Selection: Missouri Plan \n Age: 53 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Spencer Cox (R)" },
+"UT-3": { field1: "December 1, 2025", field2: "January 5, 2031", notes: " Selection: Missouri Plan \n Age: Unknown \n Party Affiliation: Independent/Indeterminate \n Appointed By: Spencer Cox (R)" },
+"UT-4": { field1: ", 1900", field2: "", notes: " Selection: Missouri Plan \n Age:  \n Party Affiliation:  \n Appointed By: " },
+"UT-5": { field1: "", field2: "", notes: " Selection: Missouri Plan \n Age:  \n Party Affiliation:  \n Appointed By: " },
+"UT-6": { field1: "", field2: "", notes: " Selection: Missouri Plan \n Age:  \n Party Affiliation:  \n Appointed By: " },
+
+"VT-0": { field1: "December 17, 2004", field2: "March 31, 2029", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 79 \n Party Affiliation: Republican \n Appointed By: Jim Douglas (R)" },
+"VT-1": { field1: "October 27, 2014", field2: "March 31, 2029", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 71 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Peter Shumlin (D)" },
+"VT-2": { field1: "April 15, 2022", field2: "March 31, 2029", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 66 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Phil Scott (R)" },
+"VT-3": { field1: "February 3, 2026", field2: "March 31, 2029", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 47 \n Party Affiliation: Republican \n Appointed By: Phil Scott (R)" },
+"VT-4": { field1: "February 4, 2026", field2: "March 31, 2029", notes: " Selection: Appointment by Governor with Approval by Senate \n Age: 61 \n Party Affiliation: Republican \n Appointed By: Phil Scott (R)" },
+
+"VA-0": { field1: "August 1, 2011", field2: "January 29, 2031", notes: " Selection: Appointment by Senate with Approval by House of Delegates \n Age: 69 \n Party Affiliation: Democratic \n Appointed By: General Assembly" },
+"VA-1": { field1: "February 1, 2015", field2: "January 31, 2027", notes: " Selection: Appointment by Senate with Approval by House of Delegates \n Age: 65 \n Party Affiliation: Republican \n Appointed By: General Assembly (R)" },
+"VA-2": { field1: "March 3, 2016", field2: "March 2, 2028", notes: " Selection: Appointment by Senate with Approval by House of Delegates \n Age: 54 \n Party Affiliation: Republican \n Appointed By: General Assembly (R)" },
+"VA-3": { field1: "September 1, 2019", field2: "January 30, 2029", notes: " Selection: Appointment by Senate with Approval by House of Delegates \n Age: 71 \n Party Affiliation: Republican \n Appointed By: General Assembly (R)" },
+"VA-4": { field1: "July 1, 2022", field2: "June 30, 2034", notes: " Selection: Appointment by Senate with Approval by House of Delegates \n Age: 56 \n Party Affiliation: Republican \n Appointed By: General Assembly" },
+"VA-5": { field1: "August 1, 2022", field2: "July 31, 2034", notes: " Selection: Appointment by Senate with Approval by House of Delegates \n Age: 61 \n Party Affiliation: Independent/Indeterminate \n Appointed By: General Assembly" },
+"VA-6": { field1: "January 1, 2026", field2: "February 1, 2032", notes: " Selection: Appointment by Senate with Approval by House of Delegates \n Age: 68 \n Party Affiliation: Independent/Indeterminate \n Appointed By: General Assembly (D)" },
+
+
+
+"WA-0": { field1: "January 1, 2008", field2: "January 10, 2027", notes: " Selection: Non-partisan Election \n Age: 61 \n Party Affiliation: Democratic \n Appointed By: Christine Gregoire (D)" },
+"WA-1": { field1: "January 14, 1991", field2: "January 10, 2027", notes: " Selection: Non-partisan Election \n Age: 75 \n Party Affiliation: Democratic \n Appointed By: " },
+"WA-2": { field1: "January 1, 2026", field2: "January 10, 2027", notes: " Selection: Non-partisan Election \n Age: 44 \n Party Affiliation: Democratic \n Appointed By: Bob Ferguson (D)" },
+"WA-3": { field1: "January 13, 2025", field2: "January 12, 2031", notes: " Selection: Non-partisan Election \n Age: 67 \n Party Affiliation: Democratic \n Appointed By: " },
+"WA-4": { field1: "January 6, 2020", field2: "January 10, 2027", notes: " Selection: Non-partisan Election \n Age: 58 \n Party Affiliation: Democratic \n Appointed By: Jay Inslee (D)" },
+"WA-5": { field1: "April 4, 2026", field2: "January 10, 2027", notes: " Selection: Non-partisan Election \n Age: 54 \n Party Affiliation: Democratic \n Appointed By: Bob Ferguson (D)" },
+"WA-6": { field1: "April 24, 2020", field2: "January 7, 2029", notes: " Selection: Non-partisan Election \n Age: 62 \n Party Affiliation: Democratic \n Appointed By: Jay Inslee (D)" },
+"WA-7": { field1: "January 1, 2012", field2: "January 12, 2031", notes: " Selection: Non-partisan Election \n Age: 63 \n Party Affiliation: Democratic \n Appointed By: Christine Gregoire (D)" },
+"WA-8": { field1: "January 9, 2013", field2: "January 12, 2031", notes: " Selection: Non-partisan Election \n Age: 71 \n Party Affiliation: Democratic \n Appointed By: " },
+
+"WV-0": { field1: "April 27, 2022", field2: "December 31, 2036", notes: " Selection: Non-partisan Election \n Age: 40 \n Party Affiliation: Republican \n Appointed By: Jim Justice (R)" },
+"WV-1": { field1: "January 1, 2021", field2: "December 31, 2032", notes: " Selection: Non-partisan Election \n Age: 82 \n Party Affiliation: Democratic \n Appointed By: " },
+"WV-2": { field1: "January 1, 2025", field2: "December 31, 2036", notes: " Selection: Non-partisan Election \n Age: 66 \n Party Affiliation: Republican \n Appointed By: " },
+"WV-3": { field1: "August 6, 2025", field2: "December 31, 2026", notes: " Selection: Non-partisan Election \n Age: Unknown \n Party Affiliation: Republican \n Appointed By: Patrick Morrisey (R)" },
+"WV-4": { field1: "November 21, 2025", field2: "December 31, 2026", notes: " Selection: Non-partisan Election \n Age: Unknown \n Party Affiliation: Republican \n Appointed By: Patrick Morrisey (R)" },
+
+"WI-0": { field1: "August 1, 2020", field2: "July 31, 2030", notes: " Selection: Non-partisan Election \n Age: 60 \n Party Affiliation: Democratic \n Appointed By: " },
+"WI-1": { field1: "August 1, 2007", field2: "July 31, 2027", notes: " Selection: Non-partisan Election \n Age: 62 \n Party Affiliation: Republican \n Appointed By: " },
+"WI-2": { field1: "October 12, 2015", field2: "July 31, 2026", notes: " Selection: Non-partisan Election \n Age: 55 \n Party Affiliation: Republican \n Appointed By: Scott Walker (R)" },
+"WI-3": { field1: "August 1, 2018", field2: "July 31, 2028", notes: " Selection: Non-partisan Election \n Age: 57 \n Party Affiliation: Democratic \n Appointed By: " },
+"WI-4": { field1: "August 1, 2019", field2: "July 31, 2029", notes: " Selection: Non-partisan Election \n Age: 48 \n Party Affiliation: Republican \n Appointed By: " },
+"WI-5": { field1: "August 1, 2023", field2: "July 31, 2033", notes: " Selection: Non-partisan Election \n Age: 64 \n Party Affiliation: Democratic \n Appointed By: " },
+"WI-6": { field1: "August 1, 2025", field2: "July 31, 2035", notes: " Selection: Non-partisan Election \n Age: 61 \n Party Affiliation: Democratic \n Appointed By: " },
+
+"WY-0": { field1: "February 20, 2018", field2: "December 31, 2028", notes: " Selection: Missouri Plan \n Age: 65 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Matt Mead (R)" },
+"WY-1": { field1: "October 9, 2018", field2: "December 31, 2028", notes: " Selection: Missouri Plan \n Age: 66 \n Party Affiliation: Republican \n Appointed By: Matt Mead (R)" },
+"WY-2": { field1: "January 17, 2022", field2: "January 2, 2033", notes: " Selection: Missouri Plan \n Age: 52 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Mark Gordon (R)" },
+"WY-3": { field1: "March 27, 2024", field2: "January 3, 2027", notes: " Selection: Missouri Plan \n Age: 55 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Mark Gordon (R)" },
+"WY-4": { field1: "May 28, 2025", field2: "January 2, 2028", notes: " Selection: Missouri Plan \n Age: Unknown \n Party Affiliation: Republican \n Appointed By: Mark Gordon (R)" },
+
+"OKC-0": { field1: "November 1, 2017", field2: "January 12, 2031", notes: " Selection: Missouri Plan \n Age: 62 \n Party Affiliation: Republican \n Appointed By: Mary Fallin (R)" },
+"OKC-1": { field1: "March 4, 2022", field2: "January 12, 2031", notes: " Selection: Missouri Plan \n Age: 54 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Kevin Stitt (R)" },
+"OKC-2": { field1: "March 11, 2015", field2: "January 10, 2027", notes: " Selection: Missouri Plan \n Age: 68 \n Party Affiliation: Republican \n Appointed By: Mary Fallin (R)" },
+"OKC-3": { field1: "January 1, 1989", field2: "January 10, 2027", notes: " Selection: Missouri Plan \n Age: 80 \n Party Affiliation: Republican \n Appointed By: Henry Bellmon (R)" },
+"OKC-4": { field1: "August 4, 2005", field2: "January 12, 2031", notes: " Selection: Missouri Plan \n Age: 68 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Brad Henry (D)" },
+
+"TXC-0": { field1: "January 1, 2025", field2: "December 31, 2030", notes: " Selection: Partisan Election \n Age: 59 \n Party Affiliation: Republican \n Appointed By: " },
+"TXC-1": { field1: "January 1, 2017", field2: "December 31, 2028", notes: " Selection: Partisan Election \n Age: 65 \n Party Affiliation: Republican \n Appointed By: " },
+"TXC-2": { field1: "January 1, 2015", field2: "December 31, 2026", notes: " Selection: Partisan Election \n Age: 70 \n Party Affiliation: Republican \n Appointed By: " },
+"TXC-3": { field1: "January 1, 2015", field2: "December 31, 2026", notes: " Selection: Partisan Election \n Age: 60 \n Party Affiliation: Republican \n Appointed By: " },
+"TXC-4": { field1: "January 1, 2017", field2: "December 31, 2028", notes: " Selection: Partisan Election \n Age: 73 \n Party Affiliation: Republican \n Appointed By: " },
+"TXC-5": { field1: "January 1, 2021", field2: "December 31, 2028", notes: " Selection: Partisan Election \n Age: 54 \n Party Affiliation: Republican \n Appointed By: Greg Abbott (R)" },
+"TXC-6": { field1: "January 1, 2025", field2: "December 31, 2030", notes: " Selection: Partisan Election \n Age: 65 \n Party Affiliation: Republican \n Appointed By: " },
+"TXC-7": { field1: "January 1, 2025", field2: "December 31, 2030", notes: " Selection: Partisan Election \n Age: 56 \n Party Affiliation: Republican \n Appointed By: " },
+"TXC-8": { field1: "January 1, 2015", field2: "December 31, 2026", notes: " Selection: Partisan Election \n Age: 55 \n Party Affiliation: Republican \n Appointed By: " },
+
+"DC-0": { field1: "August 14, 2006", field2: "March 17, 2029", notes: " Selection: Presidential Appointment \n Age: 65 \n Party Affiliation: Independent/Indeterminate \n Appointed By: G.W. Bush (R)" },
+"DC-1": { field1: "February 3, 2012", field2: "February 3, 2027", notes: " Selection: Presidential Appointment \n Age: 63 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Barack Obama (D)" },
+"DC-2": { field1: "February 10, 2012", field2: "February 10, 2027", notes: " Selection: Presidential Appointment \n Age: 56 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Barack Obama (D)" },
+"DC-3": { field1: "September 21, 2012", field2: "September 21, 2027", notes: " Selection: Presidential Appointment \n Age: 67 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Barack Obama (D)" },
+"DC-4": { field1: "January 6, 2020", field2: "January 6, 2035", notes: " Selection: Presidential Appointment \n Age: 45 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Donald Trump (R)" },
+"DC-5": { field1: "February 18, 2022", field2: "February 18, 2037", notes: " Selection: Presidential Appointment \n Age: 42 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Joe Biden (D)" },
+"DC-6": { field1: "December 21, 2022", field2: "December 21, 2037", notes: " Selection: Presidential Appointment \n Age: 54 \n Party Affiliation: Independent/Indeterminate \n Appointed By: Joe Biden (D)" },
+"DC-7": { field1: "", field2: "", notes: " Selection: Presidential Appointment \n Age:  \n Party Affiliation:  \n Appointed By: " },
+"DC-8": { field1: "", field2: "", notes: " Selection: Presidential Appointment \n Age:  \n Party Affiliation:  \n Appointed By: " }, };
+const DOT_INFO = {};
+
+function getDotInfo(abbr, i) {
+  const raw = DOT_INFO[`${abbr}-${i}`];
+  if (!raw) return null;
+  if (typeof raw === "string") return { text: raw, label: null, color: null };
+  return { text: raw.text || "", label: raw.label || null, color: raw.color || null };
+}
+
+const STATES = [
+  { abbr:"ME", name:"Maine",             col:11, row:0, dots:7 },
+  { abbr:"WI", name:"Wisconsin",         col:6,  row:2, dots:7 },
+  { abbr:"VT", name:"Vermont",           col:10, row:1, dots:5 },
+  { abbr:"NH", name:"New Hampshire",     col:11, row:1, dots:5 },
+  { abbr:"WA", name:"Washington",        col:1,  row:2, dots:9 },
+  { abbr:"MT", name:"Montana",           col:2,  row:2, dots:7 },
+  { abbr:"ND", name:"North Dakota",      col:3,  row:2, dots:5 },
+  { abbr:"MN", name:"Minnesota",         col:4,  row:2, dots:7 },
+  { abbr:"IL", name:"Illinois",          col:5,  row:2, dots:7 },
+  { abbr:"MI", name:"Michigan",          col:7,  row:2, dots:7 },
+  { abbr:"NY", name:"New York",          col:8,  row:2, dots:7 },
+  { abbr:"MA", name:"Massachusetts",     col:10, row:2, dots:7 },
+  { abbr:"RI", name:"Rhode Island",      col:11, row:2, dots:5 },
+  { abbr:"ID", name:"Idaho",             col:1,  row:3, dots:5 },
+  { abbr:"WY", name:"Wyoming",           col:2,  row:3, dots:5 },
+  { abbr:"SD", name:"South Dakota",      col:3,  row:3, dots:5 },
+  { abbr:"IA", name:"Iowa",              col:4,  row:3, dots:7 },
+  { abbr:"IN", name:"Indiana",           col:5,  row:3, dots:5 },
+  { abbr:"OH", name:"Ohio",              col:6,  row:3, dots:7 },
+  { abbr:"PA", name:"Pennsylvania",      col:7,  row:3, dots:7 },
+  { abbr:"NJ", name:"New Jersey",        col:8,  row:3, dots:7 },
+  { abbr:"CT", name:"Connecticut",       col:9,  row:3, dots:7 },
+  { abbr:"OR", name:"Oregon",            col:1,  row:4, dots:7 },
+  { abbr:"NV", name:"Nevada",            col:2,  row:4, dots:7 },
+  { abbr:"CO", name:"Colorado",          col:3,  row:4, dots:7 },
+  { abbr:"NE", name:"Nebraska",          col:4,  row:4, dots:7 },
+  { abbr:"MO", name:"Missouri",          col:5,  row:4, dots:7 },
+  { abbr:"KY", name:"Kentucky",          col:6,  row:4, dots:7 },
+  { abbr:"WV", name:"West Virginia",     col:7,  row:4, dots:5 },
+  { abbr:"VA", name:"Virginia",          col:8,  row:4, dots:7 },
+  { abbr:"MD", name:"Maryland",          col:9,  row:4, dots:7 },
+  { abbr:"DE", name:"Delaware",          col:10, row:4, dots:5 },
+  { abbr:"CA", name:"California",        col:1,  row:5, dots:7 },
+  { abbr:"UT", name:"Utah",              col:2,  row:5, dots:7 },
+  { abbr:"NM", name:"New Mexico",        col:3,  row:5, dots:5 },
+  { abbr:"KS", name:"Kansas",            col:4,  row:5, dots:7 },
+  { abbr:"TN", name:"Tennessee",         col:5,  row:5, dots:5 },
+  { abbr:"NC", name:"North Carolina",    col:6,  row:5, dots:7 },
+  { abbr:"SC", name:"South Carolina",    col:7,  row:5, dots:5 },
+  { abbr:"DC", name:"D.C.",              col:9,  row:5, dots:9 },
+  { abbr:"AZ", name:"Arizona",           col:2,  row:6, dots:7 },
+  { abbr:"OK", name:"Oklahoma",          col:3,  row:6, dots:9 },
+  { abbr:"AR", name:"Arkansas",          col:4,  row:6, dots:7 },
+  { abbr:"MS", name:"Mississippi",       col:5,  row:6, dots:9 },
+  { abbr:"AL", name:"Alabama",           col:6,  row:6, dots:9 },
+  { abbr:"GA", name:"Georgia",           col:7,  row:6, dots:9 },
+  { abbr:"FL", name:"Florida",           col:7,  row:7, dots:7 },
+  { abbr:"TX", name:"Texas",             col:3,  row:7, dots:9 },
+  { abbr:"LA", name:"Louisiana",         col:4,  row:7, dots:7 },
+  { abbr:"AK", name:"Alaska",            col:0,  row:7, dots:5 },
+  { abbr:"HI", name:"Hawaii",            col:1,  row:8, dots:5 },
+  { abbr:"OKC", name:"OK Criminal",      col:8,  row:7, dots:5 },
+  { abbr:"TXC", name:"TX Criminal",      col:9,  row:7, dots:9 },
+];
+
+const DOT_NAMES = {
+  "ME":["Valerie Stanfill","Andrew Mead","Catherine Connors","Rick E. Lawrence","Wayne R. Douglas","Julia M. Lipez","Vacant"],
+  "WI":["Jill Karofsky","Annette Ziegler","Rebecca Bradley","Rebecca Dallet","Brian Hagedorn","Janet Protasiewicz","Susan M. Crawford"],
+  "VT":["Paul Reiber","Harold Eaton Jr.","Nancy Waples","Christina Nolan","Michael P. Drescher"],
+  "NH":["Gordon J. MacDonald","Patrick E. Donovan","Melissa Beth Countway","Bryan Gould","Daniel Will"],
+  "WA": ["Debra L. Stephens","Charles W. Johnson","Colleen Melody","Sal Mungia","Raquel Montoya-Lewis","Theodore J. Angelis","Helen Whitener","Steven Gonzalez","Sheryl Gordon McCloud"],
+
+  "MT":["Cory Swanson","James A. Rice","Beth Baker","Laurie McKinnon","James Jeremiah Shea","Ingrid Gustafson","Katherine M. Bidegaray"],
+  "ND": ["Lisa K. Fair McEvers","Jerod E. Tufte","Jon J. Jensen","Douglas Bahr","Mark Friese"],
+  "MN":["Natalie Hudson","Sarah Hennesy","Theodora Gaïtas","Gordon Moore","Paul Thissen","Anne McKeig","Karl Procaccini"],
+  "IL":["P. Scott Neville Jr.","Sanjay Tailor","Joy Cunningham","Elizabeth Rochford","Mary Kay O'Brien","Lisa Holder White","David K. Overstreet"],
+  "MI":["Megan Cavanagh","Brian K. Zahra","Richard H. Bernstein","Elizabeth M. Welch","Kyra Harris Bolden","Kimberly Thomas","Noah Hood"],
+  "NY":["Rowan D. Wilson","Jenny Rivera","Michael J. Garcia","Madeline Singas","Anthony Cannataro","Shirley Troutman","Caitlin Halligan"],
+  "MA":["Kimberly S. Budd","Frank Gaziano","Scott L. Kafker","Dalila Argaez Wendlandt","Serge Georges Jr.","Bessie Dewar","Gabrielle Wolohojian"],
+  "RI":["Paul Suttell","Maureen McKenna Goldberg","William P. Robinson III","Erin Lynch Prata","Melissa A. Long"],
+  "ID":["G. Richard Bevan","Robyn Brody","Gregory W. Moeller","Colleen Zahn","Cynthia Meyer"],
+  "WY":["Lynne J. Boomgaarden","Kari Jo Gray","John G. Fenn","Robert Jarosh","Bridget Hill"],
+  "SD":["Steven R. Jensen","Robert Gusinsky","Mark Salter","Patricia DeVaney","Scott P. Myren"],
+  "IA":["Susan Christensen","Edward Mansfield","Thomas D. Waterman","Christopher McDonald","Dana Oxley","Matthew McDermott","David N. May"],
+  "IN":["Loretta Rush","Mark Massa","Geoffrey G. Slaughter","Christopher M. Goff","Derek R. Molter"],
+  "OH":["Sharon L. Kennedy","Patrick F. Fischer","Pat DeWine","Jennifer Brunner","Joe Deters","Daniel R. Hawkins","Megan E. Shanahan"],
+  "PA":["Debra Todd","Christine Donohue","Kevin Dougherty","David Wecht","Sallie Updyke Mundy","Kevin Brobson","Daniel McCaffery"],
+  "NJ":["Stuart Rabner","Anne M. Patterson","Fabiana Pierre-Louis","Rachel Wainer Apter","Douglas M. Fasciale","Michael Noriega","John Jay Hoffman"],
+  "CT":["Raheem L. Mullins","Andrew J. McDonald","Gregory D'Auria","Steven D. Ecker","Joan K. Alexander","Nora Dannehy","William H. Bright Jr."],
+  "OR":["Meagan Flynn","Rebecca Duncan","Christopher L. Garrett","Roger DeHoog","Stephen Bushong","Bronson James","Aruna Masih"],
+  "NV":["Douglas W. Herndon","Linda M. Bell","Kristina Pickering","Elissa F. Cadish","Ron Parraguirre","Patricia Lee","Lidia S. Stiglich"],
+  "CO":["Monica Márquez","Brian Boatright","William W. Hood III","Richard L. Gabriel","Carlos Samour","Maria Berkenkotter","Susan Blanco"],
+  "NE":["Jeffrey J. Funke","Stephanie F. Stacy","Derek Vaughn","William B. Cassel","Jonathan Papik","Jason Bergevin","John Freudenberg"],
+  "MO":["W. Brent Powell","Mary Rhodes Russell","Zel Fischer","Paul C. Wilson","Robin Ransom","Kelly C. Broniec","Ginger Gooch"],
+  "KY":["Debra H. Lambert","Robert B. Conley","Christopher Shea Nickell","Kelly Thompson","Angela McCormick Bisig","Pamela R. Goodwine","Michelle M. Keller"],
+  "WV":["C. Haley Bunn","William R. Wooton","Charles S. Trump","Tom Ewing","Gerald Titus III"],
+  "VA":["Cleo Powell","D. Arthur Kelsey","Stephen R. McCullough","Teresa M. Chafin","Wesley G. Russell Jr.","Thomas P. Mann","Junius P. Fulton III"],
+  "MD":["Matthew J. Fader","Brynja M. Booth","Angela M. Eaves","Peter Killough","Jonathan Biran","Shirley M. Watts","Steven B. Gould"],
+  "DE":["Collins J. Seitz Jr.","Karen L. Valihura","Gary Traynor","Abigail LeGrow","N. Christopher Griffiths"],
+  "CA":["Patricia Guerrero","Carol Corrigan","Goodwin Liu","Leondra Kruger","Joshua Groban","Kelli Evans","Vacant"],
+  "UT": ["Matthew B. Durrant","Paige Petersen","Jill Pohlman","John Nielsen","Vacant","Vacant","Vacant"],
+
+  "NM": ["Julie J. Vargas","Michael E. Vigil","C. Shannon Bacon","David K. Thomson","Briana Zamora"],
+  "KS":["Eric S. Rosen","Melissa Standridge","Daniel Biles","K. J. Wall","Vacant","Larkin Walsh","Caleb Stegall"],
+  "TN":["Jeffrey S. Bivins","Holly M. Kirby","Sarah K. Campbell","Dwight E. Tarwater","Mary L. Wagner"],
+  "NC":["Paul Martin Newby","Anita Earls","Phil Berger Jr.","Richard Dietz","Tamara P. Barringer","Trey Allen","Allison Riggs"],
+  "SC":["John W. Kittredge","John Cannon Few","George C. James","D. Garrison Hill","Letitia H. Verdin"],
+  "DC":["Anna Blackburne-Rigsby","Corinne A. Beckwith","Catharine F. Easterly","Roy W. McLeese III","Joshua Deahl","John P. Howard III","Vijay Shanker","Vacant","Vacant"],
+  "AZ":["Ann Timmer","John Lopez IV","Clint Bolick","James Beene","Bill Montgomery","Kathryn Hackett King","Maria Elena Cruz"],
+  "OK":["Dustin Rowe","Dana Kuehn","M. John Kane IV","Noma Gurich","Travis Jett","James R. Winchester","James E. Edmondson","Doug Combs","Richard Darby"],
+  "AR":["Karen R. Baker","Courtney Rae Hudson","J. Cody Hiland","Barbara Womack Webb","Shawn Womack","Nicholas Bronni","Rhonda K. Wood"],
+  "MS":["T. Kenneth Griffis Jr","Leslie D. King","Jenifer Branning","David M. Ishee","David Sullivan","Michael K. Randolph","Vacant","Vacant","Josiah D. Coleman"],
+  "AL":["Sarah Hicks Stewart","Chris McCool","Tommy Bryan","Will Sellers","Will Parker","Greg Cook","Alisa Kelli Wise","Greg Shaw","Brady E. Mendheim Jr."],
+  "GA":["Nels S. D. Peterson","Sarah Hawkins Warren","Charlie Bethel","John J. Ellington","Carla Wong McMillian","Shawn Ellen LaGrua","Verda Colvin","Andrew Pinson","Benjamin Land"],
+  "FL":["Carlos G. Muñiz","Adam Tanenbaum","John D. Couriel","Jorge Labarga","Renatha Francis","Jamie Grosshans","Meredith Sasso"],
+  "TX":["Jimmy Blacklock","James P. Sullivan","Debra Lehrmann","John P. Devine","Rebeca Huddle","Jane Bland","Kyle D. Hawkins","J. Brett Busby","Evan Young"],
+  "LA":["John L. Weimer","Allison H. Penzato","John Guidry","Cade Cole","Jay McCallum","Jefferson D. Hughes III","Piper D. Griffin"],
+  "AK":["Susan M. Carney","Dario Borghesan","Jennifer S. Henderson","Jude Pate","Aimee A. Oravec"],
+  "HI":["Sabrina McKenna","Todd W. Eddins","Lisa M. Ginoza","Vladimir Devens","Vacant"],
+  "OKC":["Scott Rowland","William J. Musseman","Robert L. Hudson","Gary Lumpkin","David B. Lewis"],
+  "TXC":["David J. Schenk","Mary Lou Keel","Bert Richardson","Kevin Yeary","Scott Walker","Jesse McClure","Gina G. Parker","Lee Finley","David Newell"],
+};
+
+function getDotName(abbr, i) {
+  return (DOT_NAMES[abbr] && DOT_NAMES[abbr][i]) ? DOT_NAMES[abbr][i] : `${abbr} ${i+1}`;
+}
+
+const dotSelected = new Map();
+STATES.forEach(s => { for (let i = 0; i < s.dots; i++) dotSelected.set(`${s.abbr}-${i}`, false); });
+
+const CELL=72, DOT_R=9.375, DOT_GAP=21.75, PAD_X=28, PAD_Y=24;
+const maxCol=Math.max(...STATES.map(s=>s.col));
+const maxRow=Math.max(...STATES.map(s=>s.row));
+const SVG_W=(maxCol+1)*CELL+PAD_X*2;
+const SVG_H=(maxRow+1)*CELL+PAD_Y*2;
+
+const svg=document.getElementById("map-svg");
+svg.setAttribute("viewBox",`0 0 ${SVG_W} ${SVG_H}`);
+svg.setAttribute("preserveAspectRatio","xMidYMid meet");
+
+function getOffsets(count){
+  const G=DOT_GAP;
+  if(count===9){const pts=[];for(let r=0;r<3;r++)for(let c=0;c<3;c++)pts.push({dx:(c-1)*G,dy:(r-1)*G});return pts;}
+  if(count===5)return[{dx:0,dy:-G},{dx:-G,dy:0},{dx:0,dy:0},{dx:G,dy:0},{dx:0,dy:G}];
+  return[];
+}
+function getOffsets7(){
+  const G=DOT_GAP;
+  return[{dx:-G,dy:-G*0.9},{dx:0,dy:-G*0.9},{dx:G,dy:-G*0.9},{dx:-G/2,dy:0},{dx:G/2,dy:0},{dx:-G,dy:G*0.9},{dx:0,dy:G*0.9}];
+}
+function getDotOffsets(count){if(count===9)return getOffsets(9);if(count===7)return getOffsets7();if(count===5)return getOffsets(5);return getOffsets(9);}
+
+const tooltip=document.getElementById("tooltip");
+const dotEls=new Map(), labelEls=new Map(), dotOrigPos=new Map();
+let isRandomized=false, randomPositions=new Map();
+
+function generateBallPositions(){
+  const totalDots=STATES.reduce((s,st)=>s+st.dots,0);
+  const ballCX=SVG_W/2,ballCY=SVG_H/2,positions=[],goldenAngle=Math.PI*(3-Math.sqrt(5)),scale=Math.sqrt(totalDots)*DOT_R*0.78;
+  for(let k=0;k<totalDots;k++){const r=scale*Math.sqrt(k/(totalDots-1||1)),theta=k*goldenAngle;positions.push({x:ballCX+r*Math.cos(theta),y:ballCY+r*Math.sin(theta)});}
+  for(let i=positions.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[positions[i],positions[j]]=[positions[j],positions[i]];}
+  return positions;
+}
+
+function animateDots(toRandomized){
+  const positions=toRandomized?generateBallPositions():null;
+  const allKeys=[];
+  STATES.forEach(state=>{for(let i=0;i<state.dots;i++)allKeys.push({abbr:state.abbr,i});});
+  allKeys.forEach(({abbr,i},dotIndex)=>{
+    const key=`${abbr}-${i}`,el=dotEls.get(key);if(!el)return;
+    const dg=el.parentNode;
+    const orig=dotOrigPos.get(key),delay=dotIndex*3;
+    let targetX,targetY;
+    if(toRandomized){const pos=positions[dotIndex];randomPositions.set(key,pos);targetX=pos.x;targetY=pos.y;}
+    else{targetX=orig.x;targetY=orig.y;}
+    const t=dg.getAttribute("transform").match(/translate\(([^,]+),([^)]+)\)/);
+    const startX=parseFloat(t[1]),startY=parseFloat(t[2]),duration=600;
+    let startTime=null;
+    function easeInOut(t){return t<0.5?2*t*t:-1+(4-2*t)*t;}
+    setTimeout(()=>{
+      function step(ts){if(!startTime)startTime=ts;const elapsed=ts-startTime,progress=Math.min(elapsed/duration,1),eased=easeInOut(progress);const nx=startX+(targetX-startX)*eased,ny=startY+(targetY-startY)*eased;dg.setAttribute("transform",`translate(${nx},${ny})`);if(progress<1)requestAnimationFrame(step);}
+      requestAnimationFrame(step);
+    },delay);
+  });
+  labelEls.forEach(lbl=>{lbl.style.opacity=toRandomized?"0":"1";});
+}
+
+window.toggleRandomize=function(){
+  isRandomized=!isRandomized;
+  const btn=document.getElementById("rnd-btn");
+  btn.textContent=isRandomized?"Restore":"Randomize";
+  btn.classList.toggle("active",isRandomized);
+  animateDots(isRandomized);pinnedTooltip=null;tooltip.style.opacity=0;
+};
+
+let activeDetailKey=null;
+
+function renderDetailPanel(abbr,dotIdx){
+  const key=`${abbr}-${dotIdx}`,panel=document.getElementById("dot-detail-panel"),body=document.getElementById("detail-body"),data=DOT_DATA[key]||{};
+  document.getElementById("detail-dot-name").textContent=getDotName(abbr,dotIdx);
+  document.getElementById("detail-swatch").style.background=getDotColor(abbr,dotIdx);
+  document.getElementById("detail-swatch").style.borderColor=dotSelected.get(key)?"#7dd3fc":"#243c56";
+  document.getElementById("detail-state-badge").textContent=abbr;
+  body.innerHTML="";
+  const row=document.createElement("div");row.className="detail-fields-row";
+  const makeField=(label,value)=>{
+    const wrap=document.createElement("div");wrap.className="detail-field";
+    const lbl=document.createElement("div");lbl.className="detail-field-label";lbl.textContent=label;
+    const val=document.createElement("div");val.className="detail-field-value"+(!value?" empty":"");val.textContent=value||"—";
+    wrap.appendChild(lbl);wrap.appendChild(val);return wrap;
+  };
+  row.appendChild(makeField("Start Date",data.field1||""));row.appendChild(makeField("End Date or Mandatory Retirement",data.field2||""));body.appendChild(row);
+  const nw=document.createElement("div");nw.className="detail-field";
+  const nl=document.createElement("div");nl.className="detail-field-label";nl.textContent="Notes";
+  const nv=document.createElement("div");nv.className="detail-field-value multiline"+(!data.notes?" empty":"");nv.textContent=data.notes||"—";
+  nw.appendChild(nl);nw.appendChild(nv);body.appendChild(nw);
+  panel.classList.add("visible");
+  activeDetailKey=key;
+  document.querySelectorAll(".chip-dot-row").forEach(el=>{el.classList.toggle("active-detail",el.dataset.dotKey===key);});
+}
+
+function hideDetailPanel(){
+  document.getElementById("dot-detail-panel").classList.remove("visible");
+  activeDetailKey=null;
+  document.querySelectorAll(".chip-dot-row").forEach(el=>el.classList.remove("active-detail"));
+}
+
+let pinnedTooltip=null;
+const totalPossible=STATES.reduce((s,st)=>s+st.dots,0);
+document.getElementById("total-dots").textContent=totalPossible;
+
+function svgToScreen(svgX,svgY){
+  try{const rect=svg.getBoundingClientRect();return{x:rect.left+svgX*(rect.width/SVG_W),y:rect.top+svgY*(rect.height/SVG_H)};}catch(e){return{x:svgX,y:svgY};}
+}
+
+function buildTooltipHTML(abbr,stateName,dotIdx){
+  let html=`<strong>${abbr}</strong>`;
+  if(dotIdx!==undefined){
+    html+=`<span class="tt-name" style="color:${getDotNameColor(abbr,dotIdx)}">${getDotName(abbr,dotIdx)}</span>`;
+    html+=`<span>${dotSelected.get(`${abbr}-${dotIdx}`)?"selected":"click to select"}</span>`;
+  }else{
+    html+=stateName;
+    html+=`<span>${countSel(abbr)}/${getStateDots(abbr)} selected · click to toggle all</span>`;
+  }
+  return html;
+}
+
+function positionTooltip(dotSvgX,dotSvgY){
+  const screen=svgToScreen(dotSvgX,dotSvgY),scaleY=svg.getBoundingClientRect().height/SVG_H;
+  requestAnimationFrame(()=>{
+    const th=tooltip.offsetHeight,tw=tooltip.offsetWidth;
+    let left=Math.max(tw/2+8,Math.min(screen.x,window.innerWidth-tw/2-8));
+    tooltip.style.left=left+"px";tooltip.style.top=(screen.y-DOT_R*scaleY-th-10)+"px";
+  });
+}
+
+function positionTooltipNearEl(el){
+  const rect=el.getBoundingClientRect();
+  requestAnimationFrame(()=>{
+    const th=tooltip.offsetHeight,tw=tooltip.offsetWidth;
+    let left=Math.max(tw/2+8,Math.min(rect.left+rect.width/2,window.innerWidth-tw/2-8));
+    tooltip.style.left=left+"px";tooltip.style.top=(rect.top-th-10)+"px";
+  });
+}
+
+function showTooltip(abbr,stateName,dotSvgX,dotSvgY,dotIdx){
+  if(pinnedTooltip&&!(pinnedTooltip.abbr===abbr&&pinnedTooltip.dotIdx===dotIdx))return;
+  tooltip.innerHTML=buildTooltipHTML(abbr,stateName,dotIdx);
+  tooltip.style.opacity=1;positionTooltip(dotSvgX,dotSvgY);
+}
+
+function pinTooltip(abbr,stateName,dotSvgX,dotSvgY,dotIdx){
+  pinnedTooltip={abbr,dotIdx,svgX:dotSvgX,svgY:dotSvgY,stateName};
+  tooltip.innerHTML=buildTooltipHTML(abbr,stateName,dotIdx);
+  tooltip.style.opacity=1;positionTooltip(dotSvgX,dotSvgY);
+}
+
+function hideTooltip(){if(pinnedTooltip)return;tooltip.style.opacity=0;}
+
+const ibox=document.createElementNS("http://www.w3.org/2000/svg","rect");
+ibox.setAttribute("x",PAD_X-10);ibox.setAttribute("y",PAD_Y+6.5*CELL);
+ibox.setAttribute("width",CELL*2+20);ibox.setAttribute("height",CELL*2+10);
+ibox.setAttribute("fill","none");ibox.setAttribute("stroke","#0f1e2e");
+ibox.setAttribute("stroke-width","1");ibox.setAttribute("rx","4");ibox.setAttribute("stroke-dasharray","4,3");
+svg.appendChild(ibox);
+
+svg.addEventListener("click",()=>{pinnedTooltip=null;tooltip.style.opacity=0;hideDetailPanel();});
+
+STATES.forEach(state=>{
+  const cx=PAD_X+state.col*CELL+CELL/2,cy=PAD_Y+state.row*CELL+CELL/2;
+  const g=document.createElementNS("http://www.w3.org/2000/svg","g");
+  getDotOffsets(state.dots).forEach(({dx,dy},i)=>{
+    const key=`${state.abbr}-${i}`,dotX=cx+dx,dotY=cy+dy;
+    const dg=document.createElementNS("http://www.w3.org/2000/svg","g");
+    dg.setAttribute("transform",`translate(${dotX},${dotY})`);
+    const c=document.createElementNS("http://www.w3.org/2000/svg","circle");
+    c.setAttribute("cx",0);c.setAttribute("cy",0);c.setAttribute("r",DOT_R);c.setAttribute("class","dot");
+    c.setAttribute("fill","#182534");c.setAttribute("stroke","#1e3048");c.setAttribute("stroke-width","0.5");
+    dotEls.set(key,c);dotOrigPos.set(key,{x:dotX,y:dotY});
+    c.addEventListener("mouseenter",()=>{const t=dg.getAttribute("transform").match(/translate\(([^,]+),([^)]+)\)/);showTooltip(state.abbr,state.name,parseFloat(t[1]),parseFloat(t[2]),i);});
+    c.addEventListener("mouseleave",hideTooltip);
+    c.addEventListener("click",e=>{
+      e.stopPropagation();
+      dotSelected.set(key,!dotSelected.get(key));
+      renderDot(state.abbr,i);renderLabel(state.abbr);updateStats();
+      const t=dg.getAttribute("transform").match(/translate\(([^,]+),([^)]+)\)/);
+      pinTooltip(state.abbr,state.name,parseFloat(t[1]),parseFloat(t[2]),i);
+      renderDetailPanel(state.abbr,i);
+    });
+    dg.appendChild(c);
+    if(i===0){
+      const starPts=(r1,r2,pts)=>{let a=[];for(let p=0;p<pts*2;p++){const ang=(p*Math.PI/pts)-Math.PI/2,r=p%2===0?r1:r2;a.push(`${r*Math.cos(ang)},${r*Math.sin(ang)}`);}return a.join(" ");};
+      const star=document.createElementNS("http://www.w3.org/2000/svg","polygon");
+      star.setAttribute("points",starPts(6.5,2.8,5));
+      star.setAttribute("fill","#000000");
+      star.setAttribute("pointer-events","none");
+      dg.appendChild(star);
+    }
+    g.appendChild(dg);
+  });
+  const lbl=document.createElementNS("http://www.w3.org/2000/svg","text");
+  lbl.setAttribute("x",cx);lbl.setAttribute("y",cy+DOT_GAP+DOT_R+9);
+  lbl.setAttribute("class","state-label");lbl.setAttribute("fill","#2d4a62");
+  lbl.style.cursor="pointer";lbl.textContent=state.abbr;
+  labelEls.set(state.abbr,lbl);
+  lbl.addEventListener("click",()=>toggleState(state.abbr));
+  lbl.addEventListener("mouseenter",()=>showTooltip(state.abbr,state.name,cx,cy,undefined));
+  lbl.addEventListener("mouseleave",hideTooltip);
+  g.appendChild(lbl);svg.appendChild(g);
+});
+
+function getStateDots(abbr){const s=STATES.find(s=>s.abbr===abbr);return s?s.dots:9;}
+function countSel(abbr){let n=0;const t=getStateDots(abbr);for(let i=0;i<t;i++)if(dotSelected.get(`${abbr}-${i}`))n++;return n;}
+
+function renderDot(abbr,i){
+  const key=`${abbr}-${i}`,el=dotEls.get(key),on=dotSelected.get(key);
+  const full=countSel(abbr)===getStateDots(abbr);
+  const themeColor = activeThemeIndex >= 0 ? getThemeColor(abbr, i) : null;
+  const individualColor = INDIVIDUAL_DOT_COLORS[key] || null;
+  const activeColor = themeColor || individualColor;
+
+  if(activeColor){
+    el.setAttribute("fill", activeColor);
+    if(on&&full){el.setAttribute("stroke","#ffffff");el.setAttribute("stroke-width","2");}
+    else if(on){el.setAttribute("stroke","#ffffff");el.setAttribute("stroke-width","1.5");}
+    else{el.setAttribute("stroke","#1e3048");el.setAttribute("stroke-width","0.5");}
+  } else {
+    el.setAttribute("fill", on ? "#f59e0b" : "#182534");
+    if(on&&full){el.setAttribute("stroke","#fde68a");el.setAttribute("stroke-width","1.2");}
+    else if(on){el.setAttribute("stroke","#7dd3fc");el.setAttribute("stroke-width","1.5");}
+    else{el.setAttribute("stroke","#1e3048");el.setAttribute("stroke-width","0.5");}
+  }
+}
+
+function renderLabel(abbr){
+  const el=labelEls.get(abbr);if(!el)return;
+  const n=countSel(abbr),t=getStateDots(abbr);
+  el.setAttribute("fill",n===t?"#92400e":n>0?"#b45309":"#2d4a62");
+}
+
+function toggleState(abbr){
+  const total=getStateDots(abbr),on=countSel(abbr)<total;
+  for(let i=0;i<total;i++){dotSelected.set(`${abbr}-${i}`,on);renderDot(abbr,i);}
+  renderLabel(abbr);updateStats();
+}
+
+function updateStats(){
+  let dots=0,totalPoss=0;
+  STATES.forEach(s=>{const n=countSel(s.abbr);dots+=n;totalPoss+=s.dots;});
+  document.getElementById("dot-count").textContent=dots;
+  document.getElementById("total-dots").textContent=totalPoss;
+  renderSelectionPanel(dots);
+}
+
+function renderSelectionPanel(totalDots){
+  const panel=document.getElementById("selection-panel"),list=document.getElementById("selection-list"),cntEl=document.getElementById("panel-dot-count");
+  const active=STATES.filter(s=>countSel(s.abbr)>0);
+  if(active.length===0){panel.classList.remove("visible");return;}
+  panel.classList.add("visible");cntEl.textContent=totalDots;list.innerHTML="";
+  active.forEach(state=>{
+    const n=countSel(state.abbr),full=n===9;
+    const chip=document.createElement("div");chip.className="sel-chip"+(full?" full":"");
+    const header=document.createElement("div");header.className="chip-header";
+    const stateDotCount=getStateDots(state.abbr);
+    const dotsGrid=document.createElement("div");dotsGrid.className="chip-dots";
+    dotsGrid.style.gridTemplateColumns=`repeat(${stateDotCount===9?3:stateDotCount===7?4:3},7px)`;
+    for(let i=0;i<stateDotCount;i++){
+      const on=dotSelected.get(`${state.abbr}-${i}`);
+      const d=document.createElement("div");d.className="chip-dot"+(!on?" empty":" named");
+      if(on){d.style.background=getDotColor(state.abbr,i);d.title=getDotName(state.abbr,i);}
+      dotsGrid.appendChild(d);
+    }
+    const abbrEl=document.createElement("div");abbrEl.className="chip-abbr";abbrEl.textContent=state.abbr;
+    const cntEl2=document.createElement("div");cntEl2.className="chip-count";cntEl2.textContent=`${n}/${stateDotCount}`;
+    header.appendChild(dotsGrid);header.appendChild(abbrEl);header.appendChild(cntEl2);chip.appendChild(header);
+    const selectedIdxs=[];
+    for(let i=0;i<stateDotCount;i++)if(dotSelected.get(`${state.abbr}-${i}`))selectedIdxs.push(i);
+    if(selectedIdxs.length>0){
+      const dlist=document.createElement("div");dlist.className="chip-dot-list";
+      selectedIdxs.forEach(i=>{
+        const dotKey=`${state.abbr}-${i}`;
+        const row=document.createElement("div");row.className="chip-dot-row"+(activeDetailKey===dotKey?" active-detail":"");row.dataset.dotKey=dotKey;
+        const pill=document.createElement("div");pill.className="dot-pill named";pill.style.background=getDotColor(state.abbr,i);
+        const txt=document.createElement("span");txt.className="dot-label";txt.style.color=getDotNameColor(state.abbr,i);txt.textContent=getDotName(state.abbr,i);
+        row.appendChild(pill);row.appendChild(txt);
+        row.addEventListener("click",e=>{e.stopPropagation();renderDetailPanel(state.abbr,i);document.getElementById("dot-detail-panel").scrollIntoView({behavior:"smooth",block:"nearest"});});
+        row.addEventListener("mouseenter",()=>{tooltip.innerHTML=buildTooltipHTML(state.abbr,state.name,i);tooltip.style.opacity=1;positionTooltipNearEl(row);});
+        row.addEventListener("mouseleave",()=>{tooltip.style.opacity=0;});
+        dlist.appendChild(row);
+        const info=getDotInfo(state.abbr,i);
+        if(info&&info.text){
+          const infoEl=document.createElement("div");infoEl.className="dot-info";
+          if(info.color)infoEl.style.color=info.color;
+          if(info.label){const lEl=document.createElement("span");lEl.className="dot-info-label";lEl.textContent=info.label;infoEl.appendChild(lEl);}
+          infoEl.appendChild(document.createTextNode(info.text));dlist.appendChild(infoEl);
+        }
+      });
+      chip.appendChild(dlist);
+    }
+    list.appendChild(chip);
+  });
+}
+
+STATES.forEach(s => { for (let i = 0; i < s.dots; i++) renderDot(s.abbr, i); });
+
+window.clearAll=function(){
+  STATES.forEach(s=>{for(let i=0;i<s.dots;i++){dotSelected.set(`${s.abbr}-${i}`,false);renderDot(s.abbr,i);}renderLabel(s.abbr);});
+  pinnedTooltip=null;tooltip.style.opacity=0;hideDetailPanel();updateStats();
+};
+</script>
+
+</body>
+</html>
